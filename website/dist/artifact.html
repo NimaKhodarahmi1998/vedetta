@@ -1,0 +1,1284 @@
+<title>FieldVision Splat Guide</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+/* Two synced views (the street | the live 3D map) above an Apple-style player.
+   Type is the system font on Apple's text styles; colors are Apple's system colors. The page follows the system
+   appearance, but the views always keep the dark values: they show dark 3D content, like video on Apple platforms. */
+:root, .view {
+  color-scheme: dark;
+  --bg: #000000;
+  --surface: #1C1C1E;
+  --fill: rgba(118, 118, 128, .24);
+  --fill-hover: rgba(118, 118, 128, .36);
+  --track: rgba(255, 255, 255, .22);
+  --label: #FFFFFF;
+  --label-2: rgba(235, 235, 245, .6);
+  --label-3: rgba(235, 235, 245, .3);
+  --accent: #5E5CE6;
+  --accent-hover: #6E6CF0;
+  --accent-text: #7D7AFF;
+  --sure: #64D2FF;
+  --maybe: #FF9F0A;
+  --danger: #FF453A;
+  --warn: #FFD60A;
+  --frozen: #8E8E93;
+  --on-color: #000000;
+  --glass: rgba(30, 30, 32, .55);
+  --glass-edge: rgba(255, 255, 255, .14);
+  --glass-shine: rgba(255, 255, 255, .12);
+  --glass-drop: rgba(0, 0, 0, .25);
+  --sheet: rgba(28, 28, 30, .82);
+}
+@media (prefers-color-scheme: light) {
+  :root {
+    color-scheme: light;
+    --bg: #F2F2F7;
+    --surface: #FFFFFF;
+    --fill: rgba(118, 118, 128, .12);
+    --fill-hover: rgba(118, 118, 128, .2);
+    --track: rgba(0, 0, 0, .12);
+    --label: #000000;
+    --label-2: rgba(60, 60, 67, .75);
+    --label-3: rgba(60, 60, 67, .3);
+    --accent: #5856D6;
+    --accent-hover: #4B49C8;
+    --accent-text: #5856D6;
+    --sure: #0071A4;
+    --warn: #FFCC00;
+    --glass: rgba(255, 255, 255, .65);
+    --glass-edge: rgba(0, 0, 0, .08);
+    --glass-shine: rgba(255, 255, 255, .8);
+    --glass-drop: rgba(0, 0, 0, .08);
+    --sheet: rgba(255, 255, 255, .9);
+  }
+}
+:root {
+  --radius: 20px;
+  --font: -apple-system, BlinkMacSystemFont, 'SF Pro';
+}
+*, *::before, *::after { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { height: 100%; }
+body {
+  margin: 0;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: 12px;
+  padding: 12px max(16px, env(safe-area-inset-right, 0px)) 12px max(16px, env(safe-area-inset-left, 0px));
+  overflow: hidden;
+  background: var(--bg);
+  color: var(--label);
+  font: 400 .9375rem/1.34 var(--font);
+  -webkit-font-smoothing: antialiased;
+}
+button {
+  min-height: 44px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--fill);
+  color: var(--label);
+  font: 600 .9375rem/1 var(--font);
+  cursor: pointer;
+}
+button:hover { background: var(--fill-hover); }
+button:focus-visible { outline: 2px solid var(--accent-text); outline-offset: 2px; }
+.icon-btn { width: 44px; padding: 0; display: grid; place-items: center; flex: none; }
+.icon-btn svg { width: 20px; height: 20px; fill: currentColor; }
+.glass {
+  background: var(--glass);
+  -webkit-backdrop-filter: blur(24px) saturate(1.8);
+  backdrop-filter: blur(24px) saturate(1.8);
+  border: 1px solid var(--glass-edge);
+  box-shadow: inset 0 1px 0 var(--glass-shine), 0 4px 16px var(--glass-drop);
+}
+
+/* Header */
+.top { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 16px; }
+.brand { display: flex; align-items: center; gap: 12px; margin-right: auto; min-width: 0; }
+.mark { width: 40px; height: 40px; flex: none; display: grid; place-items: center; border-radius: 10px; background: var(--accent); }
+.mark svg { width: 24px; height: 24px; }
+h1 { margin: 0; font: 700 1.375rem/1.27 var(--font); }
+.sub { margin: 0; color: var(--label-2); font-size: .8125rem; line-height: 1.385; }
+.status { display: inline-flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 16px; border-radius: 999px; font-weight: 600; }
+.status .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--sure); }
+.status[data-state="bad"] { background: var(--warn); border-color: var(--warn); color: var(--on-color); }
+.status[data-state="bad"] .dot { background: var(--on-color); }
+
+/* The two views */
+.views { position: relative; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; min-height: 0; }
+.view { position: relative; min-width: 0; min-height: 0; overflow: hidden; border-radius: var(--radius); background: var(--surface); color: var(--label); }
+.view canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.tag { position: absolute; z-index: 4; top: 12px; left: 12px; padding: 6px 12px; border-radius: 999px; font-size: .8125rem; line-height: 1.385; font-weight: 600; pointer-events: none; }
+.tag-accent { background: var(--accent); color: #FFFFFF; }
+.dim { position: absolute; inset: 0; z-index: 2; pointer-events: none; opacity: 0; background: radial-gradient(ellipse at 50% 62%, rgba(0, 0, 0, .55), rgba(0, 0, 0, .94)); }
+.hatch { position: absolute; inset: 0; z-index: 3; pointer-events: none; opacity: 0; border-radius: inherit; box-shadow: inset 0 0 0 3px var(--warn); background: rgba(255, 214, 10, .08); transition: opacity .25s; }
+.labels { position: absolute; inset: 0; z-index: 3; pointer-events: none; }
+.lab {
+  position: absolute; left: 0; top: 0; white-space: nowrap;
+  padding: 4px 8px; border-radius: 8px; border: 1px solid var(--label-3);
+  background: rgba(0, 0, 0, .6); color: var(--label);
+  font: 600 .75rem/1.333 var(--font); font-variant-numeric: tabular-nums;
+}
+.lab[data-s="sure"] { color: var(--sure); border-color: var(--sure); }
+.lab[data-s="maybe"] { color: var(--maybe); border: 1px dashed var(--maybe); }
+.lab[data-s="hidden"] { color: var(--sure); border: 1px dotted var(--sure); }
+.lab[data-s="danger"] { color: var(--on-color); background: var(--danger); border-color: var(--danger); }
+.lab[data-s="frozen"] { color: var(--frozen); border-color: var(--frozen); }
+.lab[data-s="ring"] { padding: 0; border: 0; background: none; color: var(--label-2); font-weight: 500; }
+.legend { position: absolute; z-index: 4; left: 12px; bottom: 12px; width: fit-content; max-width: calc(100% - 24px); display: flex; flex-wrap: wrap; gap: 4px 14px; margin: 0; padding: 8px 14px; border-radius: 18px; list-style: none; color: var(--label-2); font-size: .75rem; line-height: 1.333; pointer-events: none; }
+.sw { display: inline-block; width: 10px; height: 10px; margin-right: 6px; border-radius: 50%; vertical-align: -1px; }
+.sw.sure { background: var(--sure); }
+.sw.maybe { border: 2px dashed var(--maybe); }
+.sw.hidden { border: 2px dotted var(--sure); }
+.sw.danger { background: var(--danger); }
+.sw.warn { background: var(--warn); }
+
+/* Start card */
+.start { position: absolute; inset: 0; z-index: 10; display: grid; place-items: center; padding: 16px; background: rgba(0, 0, 0, .45); }
+.card { width: min(560px, 100%); max-height: 100%; overflow: auto; padding: 28px; border-radius: 28px; background: var(--sheet); }
+.card h2 { margin: 0 0 8px; font: 700 1.75rem/1.214 var(--font); text-wrap: balance; }
+.card p { margin: 0; color: var(--label-2); font-size: 1.0625rem; line-height: 1.294; }
+.cta { display: flex; flex-wrap: wrap; gap: 12px; margin: 24px 0 16px; }
+.cta button { padding: 0 24px; font-size: 1.0625rem; }
+.cta .primary { background: var(--accent); color: #FFFFFF; }
+.cta .primary:hover { background: var(--accent-hover); }
+.card .note { font-size: .8125rem; line-height: 1.385; }
+
+/* Subtitles: white text on a dark box per line, centered at the bottom of the street view, like Apple's */
+.subtitles { position: absolute; z-index: 4; left: 50%; bottom: 20px; transform: translateX(-50%); width: max-content; max-width: calc(100% - 48px); display: flex; flex-direction: column; align-items: center; gap: 4px; text-align: center; pointer-events: none; }
+.subtitles p { margin: 0; }
+.subtitles span { padding: 2px 10px; border-radius: 6px; background: rgba(0, 0, 0, .75); color: #FFFFFF; font: 600 clamp(1.0625rem, .8rem + .9vw, 1.5rem)/1.5 var(--font); -webkit-box-decoration-break: clone; box-decoration-break: clone; }
+
+/* Rail: an Apple-style player */
+.rail { display: flex; justify-content: center; }
+.player { display: flex; align-items: center; gap: 8px; width: min(640px, 100%); padding: 6px 10px; border-radius: 999px; }
+.player .icon-btn { background: transparent; }
+.player .icon-btn:hover { background: var(--fill); }
+.player .icon-btn[aria-pressed="false"] { color: var(--label-2); }
+.scrub { position: relative; flex: 1; min-width: 0; height: 44px; display: flex; align-items: center; border-radius: 999px; cursor: pointer; touch-action: none; }
+.scrub:focus { outline: none; }
+.track { display: flex; gap: 3px; width: 100%; height: 8px; }
+.seg { position: relative; min-width: 0; height: 100%; overflow: hidden; border-radius: 4px; background: var(--track); }
+.seg i { position: absolute; inset: 0 auto 0 0; width: 0; background: var(--label); }
+.tip { position: absolute; bottom: calc(100% + 8px); left: 0; padding: 6px 12px; border-radius: 999px; white-space: nowrap; font-size: .8125rem; line-height: 1.385; font-weight: 600; font-variant-numeric: tabular-nums; pointer-events: none; }
+
+@media (max-width: 860px) {
+  body { height: auto; min-height: 100%; overflow: auto; }
+  .views { grid-template-columns: minmax(0, 1fr); }
+  .view { height: 46vh; min-height: 250px; }
+  .start { position: fixed; }
+}
+</style>
+
+<header class="top">
+  <div class="brand">
+    <span class="mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round"><circle cx="6" cy="12" r="1.6" fill="#FFFFFF" stroke="none"/><path d="M10 8.5a5 5 0 0 1 0 7"/><path d="M13.5 5.5a9 9 0 0 1 0 13"/><path d="M17 2.8a13 13 0 0 1 0 18.4" stroke-dasharray="2.5 2.5"/></svg></span>
+    <div>
+      <h1>FieldVision</h1>
+      <p class="sub">Guida per pedoni non vedenti, con la sola fotocamera di iPhone.</p>
+    </div>
+  </div>
+  <div class="status glass" id="status" data-state="ok">
+    <span class="dot" aria-hidden="true"></span>
+    <span id="statusText" role="status">Guida affidabile</span>
+  </div>
+</header>
+
+<main class="views" id="views">
+  <section class="view" aria-label="La strada vera">
+    <canvas id="cReal"></canvas>
+    <div class="dim" id="dim"></div>
+    <span class="tag glass">Realtà</span>
+    <div class="subtitles" id="subtitles" aria-live="polite">
+      <p hidden><span id="cue"></span></p>
+      <p><span id="caption">Guida attiva. Vedo solo davanti.</span></p>
+    </div>
+  </section>
+  <section class="view" aria-label="La mappa 3D che iPhone costruisce dal vivo">
+    <canvas id="cSplat"></canvas>
+    <div class="labels" id="labels"></div>
+    <div class="hatch" id="hatch"></div>
+    <span class="tag tag-accent">Mappa 3D dal vivo</span>
+    <ul class="legend glass">
+      <li><span class="sw sure"></span>Confermato</li>
+      <li><span class="sw maybe"></span>Forse</li>
+      <li><span class="sw hidden"></span>Nascosto</li>
+      <li><span class="sw danger"></span>Pericolo</li>
+      <li><span class="sw warn"></span>Non affidabile</li>
+    </ul>
+  </section>
+
+  <div class="start" id="start">
+    <div class="card glass">
+      <h2>Ascolta come FieldVision guida un pedone non vedente</h2>
+      <p>A sinistra la strada vera, a destra la mappa 3D che iPhone costruisce mentre la persona cammina. Per sentire voce e suoni, usa le cuffie.</p>
+      <div class="cta">
+        <button class="primary" id="goAudio" type="button">Avvia con audio</button>
+        <button id="goSilent" type="button">Avvia senza audio</button>
+      </div>
+      <p class="note">Scena simulata: tempi e valori illustrano l’idea, non sono misure.</p>
+    </div>
+  </div>
+</main>
+
+<footer class="rail">
+  <div class="player glass">
+    <button class="icon-btn" id="btnPlay" type="button" aria-label="Riproduci"></button>
+    <div class="scrub" id="scrub" role="slider" tabindex="0" aria-label="Posizione nella scena"><div class="track" id="track"></div><span class="tip glass" id="tip" hidden></span></div>
+    <button class="icon-btn" id="btnCaptions" type="button" aria-label="Sottotitoli" aria-pressed="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h16a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2h-8l-5 4v-4H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M6 10h4M12 10h6M6 13.5h7M15 13.5h3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
+    <button class="icon-btn" id="btnAudio" type="button" aria-label="Attiva audio"></button>
+  </div>
+</footer>
+
+<script>
+/* FieldVision concept: simulation core. Pure logic, no DOM, no three.js.
+   World units are metres. The walker walks along +z; their LEFT is +x, their RIGHT is -x. */
+(function (root) {
+  'use strict';
+  const D2R = Math.PI / 180;
+
+  const L = {
+    half: 5.2, zMin: -8, zMax: 74,
+    van: { x0: 1.3, x1: 3.3, z0: 19.0, z1: 23.0, h: 2.5 },
+    side: { z0: 25.5, z1: 29.5, len: 14 },          // side street opening on the RIGHT (x = -half)
+    passage: { z0: 34, z1: 42, roof: 7.0 },          // covered passage: dark inside
+    bollards: [{ x: -0.55, z: 50 }, { x: 1.75, z: 50 }, { x: -2.85, z: 50 }],
+    cafe: { x0: -4.8, x1: -3.0, z0: 31.0, z1: 35.0 },
+    planters: [{ x: 4.5, z: 7 }, { x: 4.5, z: 27 }, { x: 4.5, z: 57 }, { x: -4.5, z: 12 }],
+    phoneH: 1.3, fovHalf: 32 * D2R, mapFovHalf: 37 * D2R, range: 30,
+    corridorHalf: 0.75, corridorLen: 6.0,
+    T: 61,
+  };
+
+  // Keyframes [t, x, z]. Linear between keys.
+  const WALKER = [
+    [0, -0.6, 0], [3.0, -0.6, 0],                  // stands: start line
+    [9.4, -0.6, 8.0],                              // walks
+    [10.9, -0.6, 8.4],                             // slows: person in the path
+    [22.4, -0.6, 21.5],                            // walks on
+    [24.6, -0.6, 21.65],                           // stops: the bike
+    [35.4, -0.6, 34.0],                            // walks to the covered passage
+    [44.8, -0.6, 42.0],                            // slow inside (dark)
+    [50.6, -0.6, 47.3],                            // careful: something ahead
+    [52.5, 0.6, 49.5],                             // steps left around the bollard
+    [54.6, 0.6, 52.0],
+    [58.2, -0.3, 55.8],
+    [61.0, -0.3, 58.6],
+  ];
+
+  const AGENTS = [
+    { id: 1, kind: 'persona', label: 'Persona', g: 'a',
+      path: [[0, -0.35, 14.0], [9.8, -0.35, 14.0], [12.2, 2.4, 17.6], [13.8, 4.1, 20.2], [15.2, 4.1, 22.6], [16.9, 1.0, 25.0], [17.9, 0.8, 26.5], [23.5, 0.8, 33.5], [32.7, 0.8, 45], [56, 0.8, 74], [61, 0.8, 74]] },
+    { id: 2, kind: 'bici', label: 'Bici', g: 'a', fast: true,
+      path: [[0, -16, 27.5], [19.97, -16, 27.5], [23.97, 6.5, 27.5], [61, 6.5, 27.5]] },
+    { id: 3, kind: 'persona', label: 'Persona', g: 'a', path: [[0, -2.9, 47], [39, -2.9, 0], [61, -2.9, -26]] },
+    { id: 4, kind: 'persona', label: 'Persona', g: 'a', path: [[0, 4.2, 66], [61, 4.2, 6]] },
+    { id: 5, kind: 'persona', label: 'Persona', g: 'a', seated: true, path: [[0, -4.1, 32.6], [61, -4.1, 32.6]] },
+    { id: 6, kind: 'ostacolo', label: 'Ostacolo', g: 'o', fixed: true, path: [[0, -0.55, 50], [61, -0.55, 50]] },
+  ];
+
+  // Every spoken line. a is the object, side is 'sinistra' or 'destra'.
+  const VOICE = {
+    start: 'Guida attiva. Vedo solo davanti.',
+    dark: 'Guida non affidabile: troppo buio',
+    light: 'Guida di nuovo attiva',
+    ahead: (a) => a.label + ' davanti',
+    hidden: (a, side) => a.label + ' nascost' + a.g + ', a ' + side,
+    back: (a, side) => a.label + ' riapparsa, a ' + side,
+    lost: (a) => a.label + ' pers' + a.g + ' di vista',
+    fast: (a, side) => 'Veloce a ' + side + '!',
+  };
+
+  // Timeline checkpoints, one per case the scene shows.
+  const CHAPTERS = [
+    { t: 0, name: 'Avvio' }, { t: 7.5, name: 'Persona davanti' }, { t: 12.5, name: 'Persona nascosta' },
+    { t: 20.2, name: 'Bici veloce' }, { t: 33.6, name: 'Troppo buio' }, { t: 45.2, name: 'Ostacolo' },
+  ];
+
+  function samplePath(path, t) {
+    if (t <= path[0][0]) return { x: path[0][1], z: path[0][2] };
+    for (let i = 1; i < path.length; i++) {
+      const a = path[i - 1], b = path[i];
+      if (t <= b[0]) {
+        const u = (t - a[0]) / Math.max(1e-6, b[0] - a[0]);
+        return { x: a[1] + (b[1] - a[1]) * u, z: a[2] + (b[2] - a[2]) * u };
+      }
+    }
+    const e = path[path.length - 1];
+    return { x: e[1], z: e[2] };
+  }
+  function velocity(path, t) {
+    const h = 0.05, a = samplePath(path, t - h), b = samplePath(path, t + h);
+    return { x: (b.x - a.x) / (2 * h), z: (b.z - a.z) / (2 * h) };
+  }
+
+  function rng(seed) {
+    let s = seed | 0;
+    return function () {
+      s = (s + 0x6D2B79F5) | 0;
+      let t = Math.imul(s ^ (s >>> 15), 1 | s);
+      t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  }
+
+  const inPassage = (x, z) => z > L.passage.z0 && z < L.passage.z1 && x > -L.half && x < L.half;
+
+  // 2D segment vs box (Liang–Barsky). True if the segment passes through the box.
+  function segHitsBox(ax, az, bx, bz, b) {
+    let t0 = 0, t1 = 1;
+    const dx = bx - ax, dz = bz - az;
+    const p = [-dx, dx, -dz, dz], q = [ax - b.x0, b.x1 - ax, az - b.z0, b.z1 - az];
+    for (let i = 0; i < 4; i++) {
+      if (Math.abs(p[i]) < 1e-9) { if (q[i] < 0) return false; continue; }
+      const r = q[i] / p[i];
+      if (p[i] < 0) { if (r > t1) return false; if (r > t0) t0 = r; }
+      else { if (r < t0) return false; if (r < t1) t1 = r; }
+    }
+    return t0 < t1 && t1 > 0.03 && t0 < 0.97;
+  }
+
+  // Beyond a facade line, a target is visible only through the side-street opening.
+  function facadeBlocks(w, x, z) {
+    if (Math.abs(x) <= L.half + 0.01) return false;
+    const sx = x > 0 ? L.half : -L.half;
+    const u = (sx - w.x) / (x - w.x);
+    const zc = w.z + (z - w.z) * u;
+    if (x < 0 && zc > L.side.z0 && zc < L.side.z1) return false;
+    return true;
+  }
+
+  function sight(w, x, z) {
+    const dx = x - w.x, dz = z - w.z, d = Math.hypot(dx, dz) || 1e-6;
+    const ux = dx / d, uz = dz / d;
+    const ang = Math.atan2(w.hz * ux - w.hx * uz, w.hx * ux + w.hz * uz); // + = left
+    const inFov = Math.abs(ang) <= L.fovHalf && d <= L.range && d > 0.4;
+    const wall = facadeBlocks(w, x, z);
+    const dark = inPassage(x, z);
+    const occl = segHitsBox(w.x, w.z, x, z, L.van);
+    return { d, ang, inFov, wall, dark, occl, visible: inFov && !wall && !dark && !occl };
+  }
+
+  // ---------- Static map: points on every surface, sorted by z ----------
+  function buildMap(seed) {
+    const R = rng(seed || 11);
+    const P = [];
+    // More, smaller splats than the surfaces strictly need: the map reads sharper while covering the same area.
+    const DENSITY = 2.5, N = (k) => Math.round(k * DENSITY), SHRINK = 1 / Math.sqrt(DENSITY);
+    function add(x, y, z, c, size, dark) {
+      let u = R() * 2 - 1, v = R() * 2 - 1, k = R() * 2 - 1;
+      const n = Math.hypot(u, v, k) || 1, m = 0.3 + R() * 1.0;
+      P.push([x, y, z, c[0], c[1], c[2], size * SHRINK, dark ? 1 : 0, (u / n) * m, (v / n) * m * 0.6, (k / n) * m]);
+    }
+    const jc = (c, k) => [c[0] * (1 - k / 2 + R() * k), c[1] * (1 - k / 2 + R() * k), c[2] * (1 - k / 2 + R() * k)];
+    const stone = [0.50, 0.48, 0.45];
+    // street paving
+    for (let i = 0; i < N(16000); i++) {
+      const x = -L.half + R() * 2 * L.half, z = L.zMin + R() * (L.zMax - L.zMin);
+      const seam = (Math.abs(((z + 100) % 1.2) - 0.6) > 0.56 || Math.abs(((x + 100) % 0.9) - 0.45) > 0.42);
+      add(x, 0.02, z, jc(seam ? [0.34, 0.33, 0.31] : stone, 0.22), 0.20, inPassage(x, z));
+    }
+    // side street paving (right side)
+    for (let i = 0; i < N(1100); i++) add(-L.half - R() * L.side.len, 0.02, L.side.z0 + R() * (L.side.z1 - L.side.z0), jc(stone, 0.22), 0.22, 0);
+    // facades: building blocks with Neapolitan colours, windows and green shutters
+    const pal = [[0.82, 0.64, 0.40], [0.74, 0.44, 0.31], [0.85, 0.67, 0.61], [0.88, 0.79, 0.55], [0.70, 0.60, 0.49]];
+    const blocks = [];
+    for (const side of [1, -1]) {
+      let z = L.zMin, k = side > 0 ? 0 : 2;
+      while (z < L.zMax) {
+        const wdt = 6 + R() * 4, hgt = 12 + R() * 6;
+        blocks.push({ side, z0: z, z1: Math.min(L.zMax, z + wdt), h: hgt, c: pal[k % pal.length] });
+        z += wdt; k++;
+      }
+    }
+    for (const b of blocks) {
+      const x = b.side * L.half, area = (b.z1 - b.z0) * 11;
+      const n = N(area * 7);
+      for (let i = 0; i < n; i++) {
+        const z = b.z0 + R() * (b.z1 - b.z0), y = R() * 11;
+        if (b.side < 0 && z > L.side.z0 && z < L.side.z1) continue;       // the side-street opening
+        const inWin = y > 2.4 && ((y - 2.4) % 3.2) > 0.9 && ((y - 2.4) % 3.2) < 2.5 && ((z + 50) % 2.6) > 0.7 && ((z + 50) % 2.6) < 1.7;
+        const shutter = inWin && (((z + 50) % 2.6) < 0.95 || ((z + 50) % 2.6) > 1.45);
+        const c = shutter ? [0.24, 0.42, 0.31] : inWin ? [b.c[0] * 0.38, b.c[1] * 0.38, b.c[2] * 0.42] : b.c;
+        add(x, y, z, jc(c, 0.16), 0.24, inPassage(0, z) && y < L.passage.roof);
+      }
+    }
+    // side-street walls
+    for (const zz of [L.side.z0, L.side.z1]) {
+      for (let i = 0; i < N(700); i++) add(-L.half - R() * L.side.len, R() * 11, zz, jc(pal[3], 0.16), 0.24, 0);
+    }
+    // parked van (left side)
+    const v = L.van, white = [0.88, 0.89, 0.92];
+    for (let i = 0; i < N(1300); i++) {
+      const f = R();
+      let x, y, z;
+      if (f < 0.34) { x = v.x0; y = 0.35 + R() * (v.h - 0.35); z = v.z0 + R() * (v.z1 - v.z0); }
+      else if (f < 0.52) { x = v.x0 + R() * (v.x1 - v.x0); y = v.h; z = v.z0 + R() * (v.z1 - v.z0); }
+      else if (f < 0.76) { x = v.x0 + R() * (v.x1 - v.x0); y = 0.35 + R() * (v.h - 0.35); z = v.z0; }
+      else { x = v.x0 + R() * (v.x1 - v.x0); y = 0.35 + R() * (v.h - 0.35); z = v.z1; }
+      const stripe = y > 1.05 && y < 1.3;
+      add(x, y, z, jc(stripe ? [0.45, 0.47, 0.95] : white, 0.08), 0.2, 0);
+    }
+    // bollards
+    for (const b of L.bollards) {
+      for (let i = 0; i < N(220); i++) {
+        const a = R() * Math.PI * 2, y = R() * 0.92;
+        const band = y > 0.70 && y < 0.80;
+        add(b.x + Math.cos(a) * 0.11, y, b.z + Math.sin(a) * 0.11, jc(band ? [0.95, 0.95, 0.9] : [0.36, 0.37, 0.40], 0.1), 0.12, 0);
+      }
+    }
+    // covered passage: roof underside, entrance beams
+    const pz = L.passage;
+    for (let i = 0; i < N(1400); i++) add(-L.half + R() * 2 * L.half, pz.roof, pz.z0 + R() * (pz.z1 - pz.z0), jc([0.42, 0.42, 0.46], 0.2), 0.26, 1);
+    for (const zz of [pz.z0, pz.z1]) {
+      for (let i = 0; i < N(700); i++) {
+        const x = -L.half + R() * 2 * L.half, y = 4.6 + R() * (pz.roof - 4.6);
+        add(x, y, zz, jc([0.78, 0.74, 0.66], 0.12), 0.24, 0);
+      }
+    }
+    // café on the right: tables and umbrellas
+    for (let k = 0; k < 3; k++) {
+      const cx = -3.9, cz = 31.4 + k * 1.5;
+      for (let i = 0; i < N(140); i++) { const a = R() * Math.PI * 2, r = R() * 0.38; add(cx + Math.cos(a) * r, 0.74, cz + Math.sin(a) * r, jc([0.85, 0.85, 0.82], 0.1), 0.14, 0); }
+      for (let i = 0; i < N(160); i++) { const a = R() * Math.PI * 2, r = Math.sqrt(R()) * 1.0; add(cx + Math.cos(a) * r, 2.25 - r * 0.15, cz + Math.sin(a) * r, jc([0.86, 0.35, 0.30], 0.12), 0.18, 0); }
+    }
+    // planters
+    for (const p of L.planters) {
+      for (let i = 0; i < N(160); i++) { const a = R() * Math.PI * 2, r = Math.sqrt(R()) * 0.5, y = R() * 1.0; add(p.x + Math.cos(a) * r, y, p.z + Math.sin(a) * r, jc(y > 0.45 ? [0.30, 0.52, 0.30] : [0.55, 0.42, 0.32], 0.2), 0.18, 0); }
+    }
+    P.sort((a, b) => a[2] - b[2]);
+    const n = P.length;
+    const M = {
+      n, pos: new Float32Array(n * 3), col: new Float32Array(n * 3), noise: new Float32Array(n * 3),
+      size: new Float32Array(n), dark: new Uint8Array(n), conf: new Float32Array(n), z: new Float32Array(n),
+    };
+    for (let i = 0; i < n; i++) {
+      const p = P[i];
+      M.pos[i * 3] = p[0]; M.pos[i * 3 + 1] = p[1]; M.pos[i * 3 + 2] = p[2];
+      M.col[i * 3] = p[3]; M.col[i * 3 + 1] = p[4]; M.col[i * 3 + 2] = p[5];
+      M.size[i] = p[6]; M.dark[i] = p[7];
+      M.noise[i * 3] = p[8]; M.noise[i * 3 + 1] = p[9]; M.noise[i * 3 + 2] = p[10];
+      M.z[i] = p[2];
+    }
+    M.blocks = blocks;
+    return M;
+  }
+
+  function lowerBound(arr, v) { let lo = 0, hi = arr.length; while (lo < hi) { const m = (lo + hi) >> 1; if (arr[m] < v) lo = m + 1; else hi = m; } return lo; }
+
+  const COS_MAP = Math.cos(L.mapFovHalf);
+  function updateMap(M, S, dt) {
+    if (!S.reliable) return 0;
+    const w = S.w;
+    let i = lowerBound(M.z, w.z - 1), touched = 0;
+    const zHi = w.z + L.range;
+    for (; i < M.n && M.z[i] <= zHi; i++) {
+      if (M.conf[i] >= 1) continue;
+      const x = M.pos[i * 3], y = M.pos[i * 3 + 1], z = M.pos[i * 3 + 2];
+      const dx = x - w.x, dz = z - w.z, d = Math.hypot(dx, dz);
+      if (d < 0.6 || d > L.range) continue;
+      if ((w.hx * dx + w.hz * dz) / d < COS_MAP) continue;
+      if (y > L.phoneH + d * 1.05 || y < L.phoneH - d * 1.2) continue;
+      if (facadeBlocks(w, x, z)) continue;
+      let rate = 2.4 * Math.exp(-d / 7.5);
+      if (M.dark[i]) rate *= 0.03;
+      M.conf[i] = Math.min(1, M.conf[i] + rate * dt);
+      touched++;
+    }
+    return touched;
+  }
+
+  // ---------- Live state ----------
+  function makeSim() {
+    return {
+      t: 0, w: { x: WALKER[0][1], z: WALKER[0][2], hx: 0, hz: 1, speed: 0, phase: 0 },
+      trust: 0.93, reliable: true, belowT: 0, aboveT: 0,
+      lastTick: -99, lastBuzz: -99, lastProx: -99, lastSayT: -99, pending: null, started: false,
+      agents: AGENTS.map(a => Object.assign({}, a, {
+        x: a.path[0][1], z: a.path[0][2], vx: 0, vz: 0, conf: 0, state: 'unseen', wasSure: false,
+        hiddenT: 0, gx: 0, gz: 0, gvx: 0, gvz: 0, inPath: false, said: false, offT: 0,
+        fastSaid: false, danger: false, d: 99, ang: 0, ahead: 0, lat: 0, frozen: false,
+      })),
+      events: [],
+    };
+  }
+
+  function emit(S, type, extra) { S.events.push(Object.assign({ type, t: S.t }, extra || {})); }
+  function say(S, text, priority, sfx) {
+    const ev = { type: 'say', text, priority: !!priority, sfx: sfx || null, t: S.t };
+    if (priority || S.t - S.lastSayT >= 1.7) { S.lastSayT = S.t; S.events.push(ev); if (priority) S.pending = null; }
+    else S.pending = ev;
+  }
+
+  function step(S, dt) {
+    const t = (S.t += dt);
+    // walker
+    const p = samplePath(WALKER, t), v = velocity(WALKER, t), sp = Math.hypot(v.x, v.z);
+    S.w.x = p.x; S.w.z = p.z; S.w.speed = sp; S.w.phase += sp * dt * 1.9;
+    if (sp > 0.15) {
+      const k = Math.min(1, dt * 4);
+      S.w.hx += (v.x / sp - S.w.hx) * k; S.w.hz += (v.z / sp - S.w.hz) * k;
+      const n = Math.hypot(S.w.hx, S.w.hz); S.w.hx /= n; S.w.hz /= n;
+    }
+    if (!S.started && t >= 0.4) { S.started = true; say(S, VOICE.start, true, null); S.lastTick = t - 1.2; }
+    // self-check: is the picture good enough to guide?
+    const dark = S.w.z > L.passage.z0 + 0.3 && S.w.z < L.passage.z1;
+    const target = dark ? 0.14 : 0.93;
+    S.trust += (target - S.trust) * Math.min(1, dt * 7);
+    if (S.reliable) {
+      S.belowT = S.trust < 0.45 ? S.belowT + dt : 0;
+      if (S.belowT >= 0.3) { S.reliable = false; S.aboveT = 0; S.lastBuzz = t; say(S, VOICE.dark, true, 'long'); }
+    } else {
+      S.aboveT = S.trust >= 0.45 ? S.aboveT + dt : 0;
+      if (S.aboveT >= 1.0) { S.reliable = true; S.belowT = 0; S.lastTick = t; say(S, VOICE.light, true, 'rising'); }
+    }
+    if (S.started && S.reliable && t - S.lastTick >= 2.0) { S.lastTick = t; emit(S, 'tick'); }
+    if (!S.reliable && t - S.lastBuzz >= 4.0) { S.lastBuzz = t; emit(S, 'haptic', { pattern: 'long' }); }
+
+    // objects
+    for (const a of S.agents) {
+      const ap = samplePath(a.path, t), av = velocity(a.path, t);
+      a.x = ap.x; a.z = ap.z; a.vx = av.x; a.vz = av.z;
+      const s = sight(S.w, a.x, a.z);
+      a.d = s.d; a.ang = s.ang;
+      const side = s.ang > 0 ? 'sinistra' : 'destra';
+      a.ahead = (a.x - S.w.x) * S.w.hx + (a.z - S.w.z) * S.w.hz;
+      a.lat = (a.x - S.w.x) * S.w.hz - (a.z - S.w.z) * S.w.hx;
+      a.danger = false;
+      if (!S.reliable) { a.frozen = true; continue; }
+      a.frozen = false;
+      if (s.visible) {
+        const was = a.state;
+        a.conf = Math.min(1, a.conf + dt * (a.fast ? 7 : 2.6 * Math.exp(-s.d / 7)));
+        a.gx = a.x; a.gz = a.z; a.gvx = a.vx; a.gvz = a.vz; a.hiddenT = 0;
+        a.state = a.conf >= 0.6 ? 'sure' : 'maybe';
+        if (was === 'hidden' && a.wasSure) say(S, VOICE.back(a, side), false, 'knock');
+        if (a.state === 'sure') a.wasSure = true;
+      } else if (s.inFov && !s.wall && !s.dark && s.occl && (a.state === 'sure' || a.state === 'maybe' || a.state === 'hidden')) {
+        if (a.state !== 'hidden') { a.state = 'hidden'; a.hiddenT = 0; if (a.wasSure) say(S, VOICE.hidden(a, side), false, 'flutter'); }
+        a.hiddenT += dt; a.gx += a.gvx * dt; a.gz += a.gvz * dt;
+        if (a.hiddenT > 3.0) { a.state = 'lost'; a.wasSure = false; say(S, VOICE.lost(a), false, null); }
+      } else {
+        if (a.state === 'sure' || a.state === 'maybe' || a.state === 'hidden') a.state = 'out';
+        a.conf = Math.max(0, a.conf - dt * 0.12);
+      }
+      // fast mover heading into the walker's line
+      const speed = Math.hypot(a.vx, a.vz);
+      if (a.fast && s.visible && speed > 3) {
+        const tc = (S.w.x - a.x) / (Math.abs(a.vx) > 1e-3 ? a.vx : 1e-3);
+        if (tc > -0.4 && tc < 2.5 && a.ahead > 0 && a.ahead < 9) {
+          a.danger = true;
+          if (!a.fastSaid) { a.fastSaid = true; say(S, VOICE.fast(a, side), true, 'fast'); }
+        }
+      }
+      // something sure in the walking path
+      const halfW = L.corridorHalf + (a.kind === 'ostacolo' ? 0.35 : 0.3);
+      const inPath = a.state === 'sure' && a.ahead > 0.3 && a.ahead < L.corridorLen && Math.abs(a.lat) < halfW;
+      if (inPath) {
+        a.offT = 0;
+        if (!a.said && !a.fast) { a.said = true; say(S, VOICE.ahead(a), false, 'knock'); }
+        if (a.ahead < 3.5) a.danger = true;
+        if (a.kind === 'ostacolo' && a.ahead < 5.0) {
+          const iv = Math.max(0.12, 0.12 + ((a.ahead - 1.0) / 4.0) * 0.68);
+          if (t - S.lastProx >= iv) { S.lastProx = t; emit(S, 'prox', { d: a.ahead }); }
+        }
+      } else { a.offT += dt; if (a.offT > 4) a.said = false; }
+      a.inPath = inPath;
+    }
+    if (S.pending && t - S.pending.t > 1.2) S.pending = null;   // a stale line is dropped, never said late
+    if (S.pending && t - S.lastSayT >= 1.7) { const ev = S.pending; S.pending = null; S.lastSayT = t; ev.t = t; S.events.push(ev); }
+  }
+
+  root.FVSim = { L, WALKER, AGENTS, VOICE, CHAPTERS, samplePath, velocity, sight, buildMap, updateMap, makeSim, step, rng, inPassage };
+})(typeof window !== 'undefined' ? window : globalThis);
+
+</script>
+<script type="importmap">{"imports":{"three":"https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js"}}</script>
+<script type="module">
+import * as THREE from 'three';
+
+const F = window.FVSim, L = F.L;
+const $ = (id) => document.getElementById(id);
+const fmt = (v, d = 1) => v.toFixed(d).replace('.', ',');
+// Colors are defined once, as CSS tokens in shell.html, so the 3D scenes and the interface never drift apart.
+// They're read from a view, which keeps the dark values in both appearances.
+const viewStyle = getComputedStyle(document.querySelector('.view'));
+const token = (name) => viewStyle.getPropertyValue('--' + name).trim();
+const HEX = { accent: token('accent'), sure: token('sure'), maybe: token('maybe'), danger: token('danger'), warn: token('warn'), grey: token('frozen'), bg: token('bg') };
+const TEXT = {
+  play: 'Riproduci', pause: 'Pausa',
+  audioOff: 'Attiva audio', audioOn: 'Disattiva audio',
+  statusOk: 'Guida affidabile', statusBad: 'Guida non affidabile: troppo buio',
+  maybeFar: 'Oggetto',
+};
+const ICON = {
+  play: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13a1 1 0 0 0 1.5.86l10.5-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5z"/></svg>',
+  pause: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>',
+  audioOn: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h3l5-4v14l-5-4H4z"/><path d="M15.5 8.5a5 5 0 0 1 0 7M18.5 5.5a9 9 0 0 1 0 13" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>',
+  audioOff: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 9h3l5-4v14l-5-4H4z"/><path d="M16 9l5 6M21 9l-5 6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>',
+};
+const raw = (hex) => { const n = parseInt(hex.slice(1), 16); return new THREE.Color().setRGB(((n >> 16) & 255) / 255, ((n >> 8) & 255) / 255, (n & 255) / 255); };
+const srgb = (c) => new THREE.Color().setRGB(c[0], c[1], c[2], THREE.SRGBColorSpace);
+const smooth = (a, b, x) => { const t = Math.min(1, Math.max(0, (x - a) / (b - a))); return t * t * (3 - 2 * t); };
+
+// ---------------- simulation ----------------
+const M = F.buildMap(11);
+let S = F.makeSim();
+let playing = false, audioOn = false, waveT = -99, snap = true;
+
+// ---------------- renderers ----------------
+const cReal = $('cReal'), cSplat = $('cSplat');
+function makeRenderer(canvas, real) {
+  const r = new THREE.WebGLRenderer({ canvas, antialias: true, powerPreference: 'high-performance' });
+  r.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+  if (real) {
+    r.shadowMap.enabled = true; r.shadowMap.type = THREE.PCFSoftShadowMap;
+    r.toneMapping = THREE.ACESFilmicToneMapping; r.toneMappingExposure = 1.05;
+  }
+  return r;
+}
+const rR = makeRenderer(cReal, true), rS = makeRenderer(cSplat, false);
+
+// ================= LEFT: the real street =================
+const sceneR = new THREE.Scene();
+const SKY = new THREE.Color('#AFC3D6');
+sceneR.background = SKY;
+sceneR.fog = new THREE.Fog(SKY, 32, 92);
+const camR = new THREE.PerspectiveCamera(55, 1, 0.1, 220);
+const hemi = new THREE.HemisphereLight(0xE2EBFF, 0x6B5A48, 1.2);
+const sun = new THREE.DirectionalLight(0xFFE0B5, 2.5);
+sun.castShadow = true;
+sun.shadow.mapSize.set(2048, 2048);
+Object.assign(sun.shadow.camera, { left: -24, right: 24, top: 24, bottom: -24, near: 1, far: 90 });
+sun.shadow.bias = -0.0005; sun.shadow.normalBias = 0.03;
+sceneR.add(hemi, sun, sun.target);
+
+const std = (color, rough = 0.9, extra = {}) => new THREE.MeshStandardMaterial(Object.assign({ color: typeof color === 'string' ? new THREE.Color(color) : color, roughness: rough }, extra));
+function canvasTex(w, h, draw) {
+  const c = document.createElement('canvas'); c.width = w; c.height = h; draw(c.getContext('2d'), w, h);
+  const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; t.wrapS = t.wrapT = THREE.RepeatWrapping; t.anisotropy = 4; return t;
+}
+const css = (c, k = 1) => `rgb(${Math.round(c[0] * 255 * k)},${Math.round(c[1] * 255 * k)},${Math.round(c[2] * 255 * k)})`;
+const facadeCache = new Map();
+function facadeTex(c) {
+  const key = c.join(',');
+  if (!facadeCache.has(key)) {
+    facadeCache.set(key, canvasTex(256, 256, (g, w, h) => {
+      g.fillStyle = css(c); g.fillRect(0, 0, w, h);
+      for (let i = 0; i < 1400; i++) { g.fillStyle = `rgba(0,0,0,${Math.random() * 0.05})`; g.fillRect(Math.random() * w, Math.random() * h, 2, 2); }
+      g.fillStyle = css(c, 0.8); g.fillRect(0, h / 2 - 7, w, 7); g.fillRect(0, h - 7, w, 7);
+      for (let fy = 0; fy < 2; fy++) for (let fx = 0; fx < 2; fx++) {
+        const x = fx * w / 2 + 38, y = fy * h / 2 + 22, ww = 52, hh = 78;
+        g.fillStyle = '#2B3038'; g.fillRect(x, y, ww, hh);
+        g.fillStyle = '#3E6B51'; g.fillRect(x - 17, y, 15, hh); g.fillRect(x + ww + 2, y, 15, hh);
+        g.fillStyle = 'rgba(255,255,255,.18)'; g.fillRect(x - 17, y, 2, hh); g.fillRect(x + ww + 2, y, 2, hh);
+        g.fillStyle = css(c, 0.66); g.fillRect(x - 22, y + hh, ww + 44, 5);
+        g.strokeStyle = 'rgba(25,25,25,.65)'; g.lineWidth = 2; g.strokeRect(x - 20, y + hh - 24, ww + 40, 24);
+      }
+    }));
+  }
+  return facadeCache.get(key);
+}
+const pave = canvasTex(256, 256, (g, w, h) => {
+  g.fillStyle = '#5E5953'; g.fillRect(0, 0, w, h);
+  for (let r = 0; r < 4; r++) {
+    const off = (r % 2) * 32;
+    for (let x = -64; x < w + 64; x += 64) {
+      const v = 112 + Math.random() * 28;
+      g.fillStyle = `rgb(${v},${v - 5},${v - 12})`; g.fillRect(x + off + 2, r * h / 4 + 2, 60, h / 4 - 4);
+    }
+  }
+});
+pave.repeat.set((2 * L.half) / 2.4, (L.zMax - L.zMin) / 2.4);
+
+const ground = new THREE.Mesh(new THREE.PlaneGeometry(2 * L.half, L.zMax - L.zMin + 10), std('#FFFFFF', 0.95, { map: pave }));
+ground.rotation.x = -Math.PI / 2; ground.position.set(0, 0, (L.zMin + L.zMax) / 2); ground.receiveShadow = true; sceneR.add(ground);
+const sideGround = new THREE.Mesh(new THREE.PlaneGeometry(14, L.side.z1 - L.side.z0), std('#76706A', 1));
+sideGround.rotation.x = -Math.PI / 2; sideGround.position.set(-L.half - 7, 0.002, (L.side.z0 + L.side.z1) / 2); sideGround.receiveShadow = true; sceneR.add(sideGround);
+
+const DEPTH = 8;
+function addBlock(side, z0, z1, h, c) {
+  if (z1 - z0 < 0.3) return;
+  const tex = facadeTex(c).clone(); tex.needsUpdate = true; tex.repeat.set((z1 - z0) / 5.2, h / 6.4);
+  const plain = std(srgb([c[0] * 0.86, c[1] * 0.86, c[2] * 0.86]), 0.95);
+  const face = std('#FFFFFF', 0.92, { map: tex });
+  const mats = [plain, plain, plain, plain, plain, plain];
+  mats[side > 0 ? 1 : 0] = face;
+  const m = new THREE.Mesh(new THREE.BoxGeometry(DEPTH, h, z1 - z0), mats);
+  m.position.set(side * (L.half + DEPTH / 2), h / 2, (z0 + z1) / 2); m.castShadow = true; m.receiveShadow = true; sceneR.add(m);
+}
+for (const b of M.blocks) {
+  if (b.side < 0 && b.z1 > L.side.z0 && b.z0 < L.side.z1) {
+    addBlock(b.side, b.z0, L.side.z0, b.h, b.c);
+    addBlock(b.side, L.side.z1, b.z1, b.h, b.c);
+  } else addBlock(b.side, b.z0, b.z1, b.h, b.c);
+}
+// buildings that close the side street and the two ends of the street
+const closer = (x, z, w, d, h, c) => { const m = new THREE.Mesh(new THREE.BoxGeometry(w, h, d), std(srgb(c), 0.95)); m.position.set(x, h / 2, z); m.castShadow = m.receiveShadow = true; sceneR.add(m); };
+closer(-L.half - DEPTH - 4, (L.side.z0 + L.side.z1) / 2, 8, 14, 15, [0.86, 0.78, 0.6]);
+closer(0, L.zMax + 6, 40, 8, 18, [0.78, 0.6, 0.45]);
+closer(0, L.zMin - 6, 40, 8, 18, [0.78, 0.6, 0.45]);
+
+// covered passage
+const stone = std('#CDBFA6', 0.9);
+const roof = new THREE.Mesh(new THREE.BoxGeometry(2 * L.half + 0.6, 0.5, L.passage.z1 - L.passage.z0), stone);
+roof.position.set(0, L.passage.roof + 0.25, (L.passage.z0 + L.passage.z1) / 2); roof.castShadow = roof.receiveShadow = true; sceneR.add(roof);
+for (const zz of [L.passage.z0, L.passage.z1]) {
+  const beam = new THREE.Mesh(new THREE.BoxGeometry(2 * L.half, 2.4, 0.6), stone);
+  beam.position.set(0, 5.8, zz); beam.castShadow = beam.receiveShadow = true; sceneR.add(beam);
+}
+// parked van
+const van = new THREE.Group();
+const vb = L.van;
+const vanBody = new THREE.Mesh(new THREE.BoxGeometry(vb.x1 - vb.x0, vb.h - 0.35, vb.z1 - vb.z0 - 0.7), std('#ECEEF2', 0.5));
+vanBody.position.set((vb.x0 + vb.x1) / 2, 0.35 + (vb.h - 0.35) / 2, (vb.z0 + 0.7 + vb.z1) / 2);
+const cab = new THREE.Mesh(new THREE.BoxGeometry(vb.x1 - vb.x0 - 0.1, 1.55, 0.7), std('#ECEEF2', 0.5));
+cab.position.set((vb.x0 + vb.x1) / 2, 0.35 + 0.78, vb.z0 + 0.35);
+const shield = new THREE.Mesh(new THREE.BoxGeometry(vb.x1 - vb.x0 - 0.2, 0.55, 0.05), std('#22303C', 0.2));
+shield.position.set((vb.x0 + vb.x1) / 2, 1.5, vb.z0 - 0.01);
+const stripe = new THREE.Mesh(new THREE.BoxGeometry(0.03, 0.22, vb.z1 - vb.z0 - 0.8), std('#5F8FFF', 0.6));
+stripe.position.set(vb.x0 - 0.01, 1.2, (vb.z0 + 0.7 + vb.z1) / 2);
+van.add(vanBody, cab, shield, stripe);
+for (const [x, z] of [[vb.x0, vb.z0 + 0.5], [vb.x1, vb.z0 + 0.5], [vb.x0, vb.z1 - 0.6], [vb.x1, vb.z1 - 0.6]]) {
+  const wh = new THREE.Mesh(new THREE.CylinderGeometry(0.34, 0.34, 0.24, 18), std('#1E1F24', 0.8));
+  wh.rotation.z = Math.PI / 2; wh.position.set(x, 0.34, z); van.add(wh);
+}
+van.traverse(o => { if (o.isMesh) { o.castShadow = true; o.receiveShadow = true; } });
+sceneR.add(van);
+// bollards
+for (const b of L.bollards) {
+  const post = new THREE.Mesh(new THREE.CylinderGeometry(0.11, 0.12, 0.92, 16), std('#3A3C42', 0.6));
+  post.position.set(b.x, 0.46, b.z); post.castShadow = true; sceneR.add(post);
+  const band = new THREE.Mesh(new THREE.CylinderGeometry(0.115, 0.115, 0.08, 16), std('#F2F2EC', 0.4));
+  band.position.set(b.x, 0.75, b.z); sceneR.add(band);
+}
+// café on the right
+for (let k = 0; k < 3; k++) {
+  const cx = -3.9, cz = 31.4 + k * 1.5;
+  const top = new THREE.Mesh(new THREE.CylinderGeometry(0.38, 0.38, 0.04, 20), std('#EDEDE8', 0.5)); top.position.set(cx, 0.74, cz);
+  const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 0.72, 8), std('#2E2E33', 0.5)); leg.position.set(cx, 0.37, cz);
+  const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.025, 0.025, 2.3, 8), std('#2E2E33', 0.5)); pole.position.set(cx, 1.15, cz);
+  const umb = new THREE.Mesh(new THREE.ConeGeometry(1.05, 0.36, 18), std('#D9534F', 0.8)); umb.position.set(cx, 2.36, cz);
+  for (const o of [top, leg, pole, umb]) { o.castShadow = true; sceneR.add(o); }
+}
+// planters
+for (const p of L.planters) {
+  const box = new THREE.Mesh(new THREE.BoxGeometry(0.9, 0.5, 0.9), std('#A8603E', 0.9)); box.position.set(p.x, 0.25, p.z);
+  const bush = new THREE.Mesh(new THREE.SphereGeometry(0.48, 14, 10), std('#4C7A44', 1)); bush.position.set(p.x, 0.8, p.z);
+  for (const o of [box, bush]) { o.castShadow = true; sceneR.add(o); }
+}
+
+// people
+function personMesh(coat, trousers = '#2D323C', skin = '#C99878') {
+  const g = new THREE.Group();
+  const legs = new THREE.Mesh(new THREE.CylinderGeometry(0.16, 0.13, 0.8, 12), std(trousers, 0.9)); legs.position.y = 0.4;
+  const torso = new THREE.Mesh(new THREE.CapsuleGeometry(0.2, 0.42, 4, 12), std(coat, 0.85)); torso.position.y = 1.12;
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.115, 14, 10), std(skin, 0.7)); head.position.y = 1.64;
+  g.add(legs, torso, head);
+  g.traverse(o => { if (o.isMesh) o.castShadow = true; });
+  g.userData.parts = { legs, torso, head };
+  return g;
+}
+const walkerR = personMesh('#DAD6CE', '#30343E');
+{
+  // white cane with a red tip, held in the right hand (the walker's right is -x)
+  const pivot = new THREE.Group(); pivot.position.set(-0.27, 0.95, 0.12);
+  const dir = new THREE.Vector3(0.1, -0.93, 0.92).normalize();
+  const cane = new THREE.Group(); cane.quaternion.setFromUnitVectors(new THREE.Vector3(0, -1, 0), dir);
+  const white = new THREE.Mesh(new THREE.CylinderGeometry(0.017, 0.017, 1.12, 8), std('#F7F7F2', 0.4)); white.position.y = -0.56;
+  const red = new THREE.Mesh(new THREE.CylinderGeometry(0.018, 0.018, 0.2, 8), std('#D33A2C', 0.5)); red.position.y = -1.22;
+  cane.add(white, red); pivot.add(cane); walkerR.add(pivot); walkerR.userData.cane = pivot;
+  const phone = new THREE.Mesh(new THREE.BoxGeometry(0.075, 0.15, 0.014), std('#15151A', 0.3)); phone.position.set(0, 1.28, 0.215);
+  const lens = new THREE.Mesh(new THREE.SphereGeometry(0.012, 8, 6), new THREE.MeshBasicMaterial({ color: HEX.accent })); lens.position.set(0.018, 1.33, 0.225);
+  walkerR.add(phone, lens);
+}
+sceneR.add(walkerR);
+
+const COATS = { 1: '#B4553A', 3: '#2F4A7A', 4: '#6F7A3E', 5: '#8C5A8E' };
+const agentR = new Map();
+for (const a of S.agents) {
+  if (a.kind === 'persona') {
+    const m = personMesh(COATS[a.id] || '#777777');
+    if (a.seated) { m.userData.parts.legs.scale.y = 0.55; m.userData.parts.legs.position.y = 0.24; m.userData.parts.torso.position.y = 0.82; m.userData.parts.head.position.y = 1.34; }
+    sceneR.add(m); agentR.set(a.id, m);
+  } else if (a.kind === 'bici') {
+    const g = new THREE.Group();
+    const wheelGeo = new THREE.TorusGeometry(0.33, 0.035, 8, 26);
+    const wm = std('#1D1E22', 0.7);
+    const w1 = new THREE.Mesh(wheelGeo, wm), w2 = new THREE.Mesh(wheelGeo, wm);
+    w1.rotation.y = Math.PI / 2; w2.rotation.y = Math.PI / 2; w1.position.set(0, 0.34, 0.55); w2.position.set(0, 0.34, -0.55);
+    const frame = new THREE.Mesh(new THREE.BoxGeometry(0.05, 0.05, 1.05), std('#2C7BE5', 0.5)); frame.position.set(0, 0.62, 0); frame.rotation.x = 0.08;
+    const rider = personMesh('#E8C547', '#2A2E36');
+    rider.position.set(0, 0.25, -0.08); rider.userData.parts.torso.rotation.x = 0.42; rider.userData.parts.torso.position.z = 0.12; rider.userData.parts.head.position.z = 0.3; rider.userData.parts.legs.scale.y = 0.8;
+    g.add(w1, w2, frame, rider); g.userData.wheels = [w1, w2];
+    g.traverse(o => { if (o.isMesh) o.castShadow = true; });
+    sceneR.add(g); agentR.set(a.id, g);
+  }
+}
+
+// ================= RIGHT: the live splat map =================
+const sceneS = new THREE.Scene();
+sceneS.background = new THREE.Color(HEX.bg);
+const camS = new THREE.PerspectiveCamera(50, 1, 0.1, 220);
+
+const mapGeo = new THREE.BufferGeometry();
+mapGeo.setAttribute('position', new THREE.BufferAttribute(M.pos, 3));
+mapGeo.setAttribute('aCol', new THREE.BufferAttribute(M.col, 3));
+mapGeo.setAttribute('aNoise', new THREE.BufferAttribute(M.noise, 3));
+mapGeo.setAttribute('aSize', new THREE.BufferAttribute(M.size, 1));
+const confAttr = new THREE.BufferAttribute(M.conf, 1); confAttr.setUsage(THREE.DynamicDrawUsage);
+mapGeo.setAttribute('aConf', confAttr);
+const mapMat = new THREE.ShaderMaterial({
+  uniforms: { uScale: { value: 600 }, uFrozen: { value: 0 }, uWave: { value: -10 }, uWaveA: { value: 0 }, uWalker: { value: new THREE.Vector3() }, uWaveCol: { value: raw(HEX.accent) } },
+  vertexShader: `
+    uniform float uScale, uFrozen, uWave, uWaveA; uniform vec3 uWalker;
+    attribute vec3 aCol; attribute vec3 aNoise; attribute float aSize; attribute float aConf;
+    varying vec3 vCol; varying float vA; varying float vWave; varying float vC;
+    void main() {
+      float c = aConf; vC = c;
+      vec3 p = position + aNoise * (1.0 - c) * 1.3;
+      vec4 mv = modelViewMatrix * vec4(p, 1.0);
+      gl_Position = projectionMatrix * mv;
+      float sz = aSize * (1.0 + (1.0 - c) * 2.4);
+      gl_PointSize = clamp(sz * uScale / max(0.1, -mv.z), 0.0, 46.0);
+      float behind = smoothstep(-16.0, -2.0, p.z - uWalker.z);
+      vA = c < 0.004 ? 0.0 : pow(c, 0.75) * mix(0.16, 1.0, behind);
+      float d = distance(p.xz, uWalker.xz);
+      vWave = uWaveA * exp(-pow((d - uWave) * 0.9, 2.0));
+      vec3 grey = vec3(dot(aCol, vec3(0.3, 0.55, 0.15)));
+      vCol = mix(aCol, grey * 0.75, uFrozen * 0.85);
+    }`,
+  fragmentShader: `
+    uniform vec3 uWaveCol;
+    varying vec3 vCol; varying float vA; varying float vWave; varying float vC;
+    void main() {
+      vec2 q = gl_PointCoord * 2.0 - 1.0; float r2 = dot(q, q); if (r2 > 1.0) discard;
+      // Confirmed splats get crisp edges, ones still being gathered stay soft.
+      float g = exp(-r2 * mix(3.0, 6.0, vC));
+      vec3 col = vCol + uWaveCol * vWave * 0.9;
+      float a = g * (vA * 0.9 + vWave * 0.3 * step(0.004, vA));
+      if (a < 0.008) discard;
+      gl_FragColor = vec4(col, a);
+    }`,
+  transparent: true, depthWrite: false,
+});
+const mapPts = new THREE.Points(mapGeo, mapMat); mapPts.frustumCulled = false; sceneS.add(mapPts);
+
+// moving objects as splat clusters
+const R = F.rng(5);
+function shape(kind) {
+  const pts = [];
+  const cyl = (n, r0, r1, y0, y1, zOff = 0, tilt = 0) => { for (let i = 0; i < n * 2; i++) { const u = R(), a = R() * Math.PI * 2, y = y0 + (y1 - y0) * u, r = r0 + (r1 - r0) * u; pts.push([Math.cos(a) * r, y, Math.sin(a) * r + zOff + (y - y0) * tilt]); } };
+  const ball = (n, cx, cy, cz, r) => { for (let i = 0; i < n * 2; i++) { let x = R() * 2 - 1, y = R() * 2 - 1, z = R() * 2 - 1; const k = Math.hypot(x, y, z) || 1; pts.push([cx + x / k * r, cy + y / k * r, cz + z / k * r]); } };
+  if (kind === 'persona') { cyl(120, 0.15, 0.2, 0.05, 0.8); cyl(130, 0.21, 0.19, 0.8, 1.5); ball(50, 0, 1.64, 0, 0.12); }
+  else if (kind === 'seated') { cyl(80, 0.15, 0.18, 0.05, 0.45); cyl(110, 0.2, 0.18, 0.5, 1.15); ball(40, 0, 1.34, 0, 0.12); }
+  else if (kind === 'bici') {
+    for (const zc of [0.55, -0.55]) for (let i = 0; i < 140; i++) { const a = R() * Math.PI * 2; pts.push([0, 0.34 + Math.sin(a) * 0.33, zc + Math.cos(a) * 0.33]); }
+    for (let i = 0; i < 80; i++) pts.push([0, 0.6 + R() * 0.06, -0.5 + R() * 1.0]);
+    cyl(70, 0.13, 0.16, 0.3, 0.95, -0.05); cyl(90, 0.19, 0.17, 0.95, 1.55, 0.05, 0.45); ball(36, 0, 1.72, 0.33, 0.11);
+  }
+  return pts;
+}
+function agentMat() {
+  return new THREE.ShaderMaterial({
+    uniforms: { uScale: { value: 600 }, uColor: { value: raw(HEX.sure) }, uAlpha: { value: 1 }, uJit: { value: 0 }, uTime: { value: 0 }, uRing: { value: 0 } },
+    vertexShader: `
+      uniform float uScale, uJit, uTime; attribute float aSeed;
+      float h(float n) { return fract(sin(n) * 43758.5453); }
+      void main() {
+        float k = floor(uTime * 14.0);
+        vec3 j = vec3(h(aSeed + k), h(aSeed * 1.7 + k * 1.3), h(aSeed * 2.3 + k * 0.7)) - 0.5;
+        vec3 p = position + j * uJit * 2.0;
+        vec4 mv = modelViewMatrix * vec4(p, 1.0);
+        gl_Position = projectionMatrix * mv;
+        gl_PointSize = clamp(0.12 * uScale / max(0.1, -mv.z), 0.0, 40.0);
+      }`,
+    fragmentShader: `
+      uniform vec3 uColor; uniform float uAlpha, uRing;
+      void main() {
+        vec2 q = gl_PointCoord * 2.0 - 1.0; float r2 = dot(q, q); if (r2 > 1.0) discard;
+        float g = exp(-r2 * 5.0);
+        float ring = smoothstep(0.3, 0.55, r2) * (1.0 - smoothstep(0.75, 1.0, r2));
+        float a = mix(g, ring * 1.3, uRing) * uAlpha;
+        if (a < 0.01) discard;
+        gl_FragColor = vec4(uColor, a);
+      }`,
+    transparent: true, depthWrite: false,
+  });
+}
+const ringGeo = new THREE.RingGeometry(0.46, 0.56, 40);
+const agentS = new Map();
+for (const a of S.agents) {
+  const v = { a: a.id, local: null, pts: null, mat: null, halo: null, yaw: 0 };
+  if (a.kind !== 'ostacolo') {
+    v.local = shape(a.seated ? 'seated' : a.kind);
+    const geo = new THREE.BufferGeometry();
+    geo.setAttribute('position', new THREE.BufferAttribute(new Float32Array(v.local.length * 3), 3));
+    const seeds = new Float32Array(v.local.length); for (let i = 0; i < seeds.length; i++) seeds[i] = R() * 100;
+    geo.setAttribute('aSeed', new THREE.BufferAttribute(seeds, 1));
+    v.mat = agentMat(); v.pts = new THREE.Points(geo, v.mat); v.pts.frustumCulled = false; sceneS.add(v.pts);
+  }
+  v.halo = new THREE.Mesh(ringGeo, new THREE.MeshBasicMaterial({ color: HEX.sure, transparent: true, opacity: 0.8, depthWrite: false, side: THREE.DoubleSide }));
+  v.halo.rotation.x = -Math.PI / 2; sceneS.add(v.halo);
+  agentS.set(a.id, v);
+}
+
+// the walker in the map: body, phone, sensing wedge, distance rings, walking corridor
+const walkerS = new THREE.Group(); sceneS.add(walkerS);
+const yawS = new THREE.Group(); walkerS.add(yawS);
+const body = new THREE.Mesh(new THREE.CapsuleGeometry(0.16, 1.15, 4, 12), new THREE.MeshBasicMaterial({ color: '#FFFFFF', transparent: true, opacity: 0.55, depthWrite: false }));
+body.position.y = 0.82; yawS.add(body);
+const phoneDot = new THREE.Mesh(new THREE.SphereGeometry(0.07, 12, 8), new THREE.MeshBasicMaterial({ color: HEX.accent })); phoneDot.position.set(0, 1.3, 0.24); yawS.add(phoneDot);
+const wedgeMat = new THREE.ShaderMaterial({
+  uniforms: { uCol: { value: raw(HEX.accent) }, uA: { value: 0.2 } },
+  vertexShader: `varying vec2 vP; void main() { vP = position.xy; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
+  fragmentShader: `uniform vec3 uCol; uniform float uA; varying vec2 vP;
+    void main() { float r = length(vP) / ${L.range.toFixed(1)}; float band = 0.55 + 0.45 * smoothstep(0.42, 0.5, abs(fract(r * 6.0) - 0.5));
+      float a = uA * pow(1.0 - r, 1.5) * smoothstep(0.0, 0.03, r) * band; gl_FragColor = vec4(uCol, a); }`,
+  transparent: true, depthWrite: false, side: THREE.DoubleSide,
+});
+const wedge = new THREE.Mesh(new THREE.CircleGeometry(L.range, 56, -Math.PI / 2 - L.mapFovHalf, 2 * L.mapFovHalf), wedgeMat);
+wedge.rotation.x = -Math.PI / 2; wedge.position.y = 0.012; yawS.add(wedge);
+const corrMat = new THREE.ShaderMaterial({
+  uniforms: { uCol: { value: raw(HEX.accent) }, uA: { value: 0.3 } },
+  vertexShader: `varying vec2 vUv; void main() { vUv = uv; gl_Position = projectionMatrix * modelViewMatrix * vec4(position, 1.0); }`,
+  fragmentShader: `uniform vec3 uCol; uniform float uA; varying vec2 vUv;
+    void main() { float edge = smoothstep(0.42, 0.5, abs(vUv.x - 0.5)); float a = uA * (0.25 + 0.75 * vUv.y) * (0.35 + 0.65 * edge); gl_FragColor = vec4(uCol, a); }`,
+  transparent: true, depthWrite: false, side: THREE.DoubleSide,
+});
+const corridor = new THREE.Mesh(new THREE.PlaneGeometry(2 * L.corridorHalf, L.corridorLen), corrMat);
+corridor.rotation.x = -Math.PI / 2; corridor.position.set(0, 0.02, 0.3 + L.corridorLen / 2); yawS.add(corridor);
+const rings = [2, 5].map(r => { const m = new THREE.Mesh(new THREE.RingGeometry(r - 0.035, r + 0.035, 96), new THREE.MeshBasicMaterial({ color: HEX.accent, transparent: true, opacity: 0.4, depthWrite: false, side: THREE.DoubleSide })); m.rotation.x = -Math.PI / 2; m.position.y = 0.016; walkerS.add(m); return m; });
+// the bike's predicted path when it's heading into the walker's line
+const dangerLine = new THREE.Line(new THREE.BufferGeometry().setFromPoints([new THREE.Vector3(), new THREE.Vector3()]), new THREE.LineBasicMaterial({ color: HEX.danger, transparent: true, opacity: 0.95 }));
+dangerLine.frustumCulled = false; sceneS.add(dangerLine);
+const crossMark = new THREE.Mesh(new THREE.RingGeometry(0.28, 0.38, 32), new THREE.MeshBasicMaterial({ color: HEX.danger, transparent: true, depthWrite: false, side: THREE.DoubleSide }));
+crossMark.rotation.x = -Math.PI / 2; sceneS.add(crossMark);
+
+// ---------------- labels over the map ----------------
+const labelsEl = $('labels');
+const mkLabel = () => { const el = document.createElement('span'); el.className = 'lab'; el.hidden = true; labelsEl.appendChild(el); return el; };
+const agentLabel = new Map(); for (const a of S.agents) agentLabel.set(a.id, mkLabel());
+const ringLabels = [2, 5].map(r => { const el = mkLabel(); el.dataset.s = 'ring'; el.textContent = r + ' m'; return el; });
+const v3 = new THREE.Vector3();
+function project(x, y, z) {
+  v3.set(x, y, z).project(camS);
+  if (v3.z > 1 || Math.abs(v3.x) > 1.05 || Math.abs(v3.y) > 1.05) return null;
+  return [(v3.x * 0.5 + 0.5) * cSplat.clientWidth, (-v3.y * 0.5 + 0.5) * cSplat.clientHeight];
+}
+// Labels never overlap: the most important one keeps its place, the others move up or step aside.
+function layoutLabels(queue) {
+  queue.sort((p, q) => q.prio - p.prio || p.d - q.d);
+  const placed = [], W = cSplat.clientWidth;
+  for (const q of queue) {
+    if (!q.p) { q.el.hidden = true; continue; }
+    q.el.hidden = false;
+    const w = q.el.offsetWidth, h = q.el.offsetHeight;
+    const x0 = Math.min(Math.max(4, q.p[0] - w / 2), Math.max(4, W - w - 4));
+    let ok = false;
+    for (const dy of [0, -(h + 4), -2 * (h + 4), h + 4]) {
+      const r = [x0, q.p[1] - h + dy, x0 + w, q.p[1] + dy];
+      if (placed.every(o => r[2] < o[0] || r[0] > o[2] || r[3] < o[1] || r[1] > o[3])) {
+        placed.push(r); q.el.style.transform = `translate(${r[0].toFixed(1)}px, ${r[1].toFixed(1)}px)`; ok = true; break;
+      }
+    }
+    if (!ok) q.el.hidden = true;
+  }
+}
+
+// ---------------- sound, speech, haptics ----------------
+let AC = null, master = null;
+function initAudio() {
+  if (AC) { if (AC.state === 'suspended') AC.resume(); return; }
+  try {
+    AC = new (window.AudioContext || window.webkitAudioContext)();
+    master = AC.createGain(); master.gain.value = 0.9;
+    const comp = AC.createDynamicsCompressor(); master.connect(comp); comp.connect(AC.destination);
+  } catch (e) { AC = null; }
+}
+function tone(f, type, at, a, d, peak, f2, lp) {
+  const o = AC.createOscillator(), g = AC.createGain();
+  o.type = type; o.frequency.setValueAtTime(f, at);
+  if (f2) o.frequency.exponentialRampToValueAtTime(f2, at + a + d);
+  g.gain.setValueAtTime(0.0001, at); g.gain.exponentialRampToValueAtTime(peak, at + a); g.gain.exponentialRampToValueAtTime(0.0001, at + a + d);
+  let node = o;
+  if (lp) { const fl = AC.createBiquadFilter(); fl.type = 'lowpass'; fl.frequency.value = lp; o.connect(fl); node = fl; }
+  node.connect(g); g.connect(master); o.start(at); o.stop(at + a + d + 0.05);
+}
+const SFX = {
+  tick: (t) => tone(2200, 'sine', t, 0.002, 0.035, 0.07),
+  knock: (t) => { tone(160, 'sine', t, 0.004, 0.2, 0.75, 85); tone(320, 'triangle', t, 0.002, 0.06, 0.2); },
+  flutter: (t) => { for (let i = 0; i < 3; i++) tone(1300, 'sine', t + i * 0.075, 0.003, 0.045, 0.18); },
+  fast: (t) => { for (let i = 0; i < 2; i++) tone(940, 'square', t + i * 0.22, 0.005, 0.15, 0.25, null, 3200); },
+  long: (t) => { for (let i = 0; i < 2; i++) tone(110, 'sawtooth', t + i * 0.62, 0.02, 0.45, 0.36, null, 750); },
+  rising: (t) => { tone(440, 'triangle', t, 0.004, 0.13, 0.38); tone(660, 'triangle', t + 0.17, 0.004, 0.15, 0.38); },
+  prox: (t) => tone(1500, 'sine', t, 0.003, 0.07, 0.22),
+};
+const VIB = { knock: [60], flutter: [25, 45, 25, 45, 25], fast: [140, 90, 140], long: [450, 170, 450], rising: [50, 70, 90], prox: [30] };
+function sfx(name) {
+  if (!audioOn || !AC || !SFX[name]) return;
+  try { SFX[name](AC.currentTime + 0.01); } catch (e) { /* audio is optional */ }
+  try { if (navigator.vibrate && VIB[name]) navigator.vibrate(VIB[name]); } catch (e) { /* not every device vibrates */ }
+}
+let itVoice = null;
+function pickVoice() { try { const vs = speechSynthesis.getVoices(); itVoice = vs.find(v => /^it[-_]IT/i.test(v.lang)) || vs.find(v => /^it/i.test(v.lang)) || null; } catch (e) { itVoice = null; } }
+if ('speechSynthesis' in window) { pickVoice(); try { speechSynthesis.addEventListener('voiceschanged', pickVoice); } catch (e) { /* older browsers */ } }
+function speak(text, priority) {
+  if (!audioOn || !('speechSynthesis' in window)) return;
+  try {
+    if (priority) speechSynthesis.cancel();
+    const u = new SpeechSynthesisUtterance(text); u.lang = 'it-IT'; if (itVoice) u.voice = itVoice; u.rate = 1.08;
+    speechSynthesis.speak(u);
+  } catch (e) { /* captions still show the line */ }
+}
+function hush() { try { if ('speechSynthesis' in window) speechSynthesis.cancel(); } catch (e) { /* nothing to stop */ } }
+
+// Sound cues, shown in brackets above the spoken line like SDH subtitles. The tick has none: it plays every 2 s.
+const SOUND_CUE = { knock: 'Un colpo', flutter: 'Fremito', fast: 'Due impulsi forti', long: 'Lungo-lungo', rising: 'Due colpi in salita', prox: 'Bip sempre più rapidi' };
+const captionEl = $('caption'), cueEl = $('cue');
+function setCaption(text) { captionEl.textContent = text; }
+function setCue(name) {
+  const cue = SOUND_CUE[name];
+  cueEl.textContent = cue ? '[' + cue + ']' : '';
+  cueEl.parentElement.hidden = !cue;
+}
+
+function handleEvents() {
+  for (const e of S.events) {
+    if (e.type === 'tick') { sfx('tick'); waveT = S.t; }
+    else if (e.type === 'haptic') { sfx(e.pattern); setCue(e.pattern); }
+    else if (e.type === 'prox') { sfx('prox'); setCue('prox'); }
+    else if (e.type === 'say') { setCaption(e.text); setCue(e.sfx); if (e.sfx) sfx(e.sfx); speak(e.text, e.priority); }
+  }
+  S.events.length = 0;
+}
+
+// ---------------- transport ----------------
+function jumpTo(t, play) {
+  hush();
+  S = F.makeSim(); M.conf.fill(0);
+  let last = null;
+  while (S.t < t - 1e-6) {
+    const h = Math.min(1 / 20, t - S.t);
+    F.step(S, h); F.updateMap(M, S, h);
+    for (const e of S.events) if (e.type === 'say') last = e;
+    S.events.length = 0;
+  }
+  confAttr.needsUpdate = true; snap = true; waveT = -99;
+  setCaption(last ? last.text : F.VOICE.start);
+  setCue(last ? last.sfx : null);
+  playing = !!play; syncButtons();
+}
+function syncButtons() {
+  const play = $('btnPlay'), audio = $('btnAudio');
+  play.innerHTML = playing ? ICON.pause : ICON.play;
+  play.setAttribute('aria-label', playing ? TEXT.pause : TEXT.play);
+  audio.innerHTML = audioOn ? ICON.audioOn : ICON.audioOff;
+  audio.setAttribute('aria-label', audioOn ? TEXT.audioOn : TEXT.audioOff);
+}
+function closeStart() { $('start').hidden = true; }
+
+// Scrubber: one segment per checkpoint, like chapters in Apple's player. Click or drag to jump, arrow keys go
+// between checkpoints. The jump happens on release, because each one replays the scene from 0.
+const scrubEl = $('scrub'), tipEl = $('tip');
+const CH = F.CHAPTERS.map((c, i, all) => ({ ...c, end: i + 1 < all.length ? all[i + 1].t : L.T }));
+const segs = CH.map((c) => {
+  const el = document.createElement('span'); el.className = 'seg'; el.style.flex = `${c.end - c.t} 1 0`;
+  const fill = document.createElement('i'); el.appendChild(fill); $('track').appendChild(el);
+  return { el, fill };
+});
+const clockText = (s) => Math.floor(s / 60) + ':' + String(s % 60).padStart(2, '0');
+const chapterAt = (t) => { let i = 0; CH.forEach((c, k) => { if (t >= c.t - 0.01) i = k; }); return i; };
+let scrubbing = false, shownSec = -1;
+scrubEl.setAttribute('aria-valuemin', '0');
+scrubEl.setAttribute('aria-valuemax', String(L.T));
+function paint(t) { CH.forEach((c, i) => { segs[i].fill.style.width = (Math.min(1, Math.max(0, (t - c.t) / (c.end - c.t))) * 100).toFixed(2) + '%'; }); }
+// A click in a gap, or in the first few pixels of a segment, lands exactly on that checkpoint.
+function timeAt(x) {
+  for (let i = 0; i < CH.length; i++) {
+    const r = segs[i].el.getBoundingClientRect();
+    if (x < r.left + 8) return CH[i].t;
+    if (x <= r.right) return CH[i].t + (x - r.left) / r.width * (CH[i].end - CH[i].t);
+  }
+  return L.T - 0.1;
+}
+function showTip(x, t) {
+  const r = scrubEl.getBoundingClientRect();
+  tipEl.textContent = CH[chapterAt(t)].name + ' · ' + clockText(Math.floor(t));
+  tipEl.hidden = false;
+  tipEl.style.left = Math.min(Math.max(0, x - r.left - tipEl.offsetWidth / 2), r.width - tipEl.offsetWidth) + 'px';
+}
+scrubEl.addEventListener('pointerdown', (e) => { scrubbing = true; scrubEl.setPointerCapture(e.pointerId); const t = timeAt(e.clientX); paint(t); showTip(e.clientX, t); });
+scrubEl.addEventListener('pointermove', (e) => { const t = timeAt(e.clientX); showTip(e.clientX, t); if (scrubbing) paint(t); });
+scrubEl.addEventListener('pointerleave', () => { if (!scrubbing) tipEl.hidden = true; });
+scrubEl.addEventListener('pointerup', (e) => { if (!scrubbing) return; scrubbing = false; tipEl.hidden = true; closeStart(); jumpTo(timeAt(e.clientX), playing); });
+scrubEl.addEventListener('pointercancel', () => { scrubbing = false; tipEl.hidden = true; });
+window.addEventListener('keydown', (e) => {
+  const dir = { ArrowLeft: -1, ArrowRight: 1 }[e.key]; if (!dir) return;
+  e.preventDefault();
+  let i = chapterAt(S.t);
+  // Like Apple's players, back first returns to the start of the current checkpoint, then to the previous one.
+  if (dir > 0) i = Math.min(CH.length - 1, i + 1);
+  else if (S.t - CH[i].t < 2) i = Math.max(0, i - 1);
+  closeStart(); jumpTo(CH[i].t, playing);
+});
+$('btnCaptions').addEventListener('click', (e) => {
+  const on = e.currentTarget.getAttribute('aria-pressed') !== 'true';
+  e.currentTarget.setAttribute('aria-pressed', String(on));
+  $('subtitles').hidden = !on;
+});
+$('goAudio').addEventListener('click', () => { initAudio(); audioOn = true; closeStart(); jumpTo(0, true); });
+$('goSilent').addEventListener('click', () => { audioOn = false; closeStart(); jumpTo(0, true); });
+function togglePlay() { closeStart(); if (S.t >= L.T - 0.05) jumpTo(0, true); else { playing = !playing; if (!playing) hush(); syncButtons(); } }
+$('btnPlay').addEventListener('click', togglePlay);
+// Space plays and pauses from anywhere, like Apple's players, so it never activates the focused button instead.
+window.addEventListener('keydown', (e) => { if (e.code !== 'Space') return; e.preventDefault(); if (!e.repeat) togglePlay(); }, true);
+window.addEventListener('keyup', (e) => { if (e.code === 'Space') e.preventDefault(); }, true);
+$('btnAudio').addEventListener('click', () => { audioOn = !audioOn; if (audioOn) initAudio(); else hush(); syncButtons(); });
+
+// ---------------- sizing ----------------
+function resize() {
+  for (const [r, cam, cv] of [[rR, camR, cReal], [rS, camS, cSplat]]) {
+    const w = cv.clientWidth, h = cv.clientHeight; if (!w || !h) continue;
+    r.setSize(w, h, false); cam.aspect = w / h; cam.updateProjectionMatrix();
+  }
+  const s = (cSplat.clientHeight * rS.getPixelRatio()) / (2 * Math.tan(THREE.MathUtils.degToRad(camS.fov) / 2));
+  mapMat.uniforms.uScale.value = s; for (const v of agentS.values()) if (v.mat) v.mat.uniforms.uScale.value = s;
+}
+new ResizeObserver(resize).observe(cReal); new ResizeObserver(resize).observe(cSplat);
+
+// ---------------- per-frame visuals ----------------
+const lookR = new THREE.Vector3(), lookS = new THREE.Vector3();
+function follow(cam, look, back, up, ahead, lookY, k) {
+  const w = S.w;
+  const tx = w.x - w.hx * back, tz = w.z - w.hz * back, lx = w.x + w.hx * ahead, lz = w.z + w.hz * ahead;
+  if (snap) { cam.position.set(tx, up, tz); look.set(lx, lookY, lz); }
+  else { cam.position.x += (tx - cam.position.x) * k; cam.position.y += (up - cam.position.y) * k; cam.position.z += (tz - cam.position.z) * k; look.x += (lx - look.x) * k; look.y += (lookY - look.y) * k; look.z += (lz - look.z) * k; }
+  cam.lookAt(look);
+}
+const STATE_WORD = { maybe: () => 'forse', sure: (g) => g === 'o' ? 'confermato' : 'confermata', hidden: (g) => g === 'o' ? 'nascosto' : 'nascosta' };
+let frozenK = 0, clock = 0;
+
+function updateVisuals(dt) {
+  clock += dt;
+  const w = S.w, yaw = Math.atan2(w.hx, w.hz);
+  // walker, left
+  walkerR.position.set(w.x, Math.abs(Math.sin(w.phase * Math.PI)) * 0.035, w.z); walkerR.rotation.y = yaw;
+  walkerR.userData.cane.rotation.y = Math.sin(w.phase * Math.PI * 0.5) * 0.38;
+  // darkness inside the covered passage
+  const dk = smooth(L.passage.z0, L.passage.z0 + 1.2, w.z) * (1 - smooth(L.passage.z1 - 0.4, L.passage.z1 + 0.6, w.z));
+  hemi.intensity = 1.2 * (1 - 0.72 * dk); sun.intensity = 2.5 * (1 - 0.55 * dk);
+  $('dim').style.opacity = (dk * 0.8).toFixed(3);
+  sun.position.set(w.x + 14, 26, w.z + 6); sun.target.position.set(w.x, 0, w.z + 8);
+  // agents, left
+  for (const a of S.agents) {
+    const m = agentR.get(a.id); if (!m) continue;
+    m.position.set(a.x, 0, a.z);
+    const sp = Math.hypot(a.vx, a.vz);
+    if (sp > 0.1) m.rotation.y = Math.atan2(a.vx, a.vz);
+    if (a.kind === 'persona' && !a.seated) m.position.y = Math.abs(Math.sin(clock * 5.2 * Math.min(1, sp))) * 0.03;
+    if (a.kind === 'bici') for (const wh of m.userData.wheels) wh.rotation.x += dt * sp / 0.33;
+  }
+  follow(camR, lookR, 4.6, 2.35, 6, 1.1, 1 - Math.exp(-dt * 3.2));
+
+  // map, right
+  frozenK += ((S.reliable ? 0 : 1) - frozenK) * Math.min(1, dt * 5);
+  mapMat.uniforms.uFrozen.value = frozenK;
+  mapMat.uniforms.uWalker.value.set(w.x, 0, w.z);
+  const age = S.t - waveT;
+  mapMat.uniforms.uWave.value = age * 15; mapMat.uniforms.uWaveA.value = S.reliable ? Math.max(0, 1 - age / 1.7) : 0;
+  confAttr.needsUpdate = true;
+  walkerS.position.set(w.x, 0, w.z); yawS.rotation.y = yaw;
+  wedgeMat.uniforms.uCol.value.copy(raw(S.reliable ? HEX.accent : HEX.warn)); wedgeMat.uniforms.uA.value = S.reliable ? 0.2 : 0.07;
+
+  let danger = false, dangerBike = null;
+  const queue = [];
+  for (const a of S.agents) {
+    const v = agentS.get(a.id), lab = agentLabel.get(a.id);
+    const showable = a.state === 'maybe' || a.state === 'sure' || a.state === 'hidden';
+    const isDanger = a.danger && !a.frozen;
+    if (isDanger) danger = true;
+    if (isDanger && a.fast) dangerBike = a;
+    const hx = a.state === 'hidden' ? a.gx : a.x, hz = a.state === 'hidden' ? a.gz : a.z;
+    let col = HEX.sure, alpha = 0.95, jit = 0.012, ringMode = 0, haloOp = 0.8;
+    if (a.frozen) { col = HEX.grey; alpha = 0.55; jit = 0; haloOp = 0.4; }
+    else if (isDanger) { col = HEX.danger; alpha = 1; jit = 0.01; haloOp = 0.6 + 0.4 * Math.sin(clock * 14); }
+    else if (a.state === 'maybe') { col = HEX.maybe; alpha = 0.3 + a.conf * 0.6; jit = 0.11; haloOp = 0.55; }
+    else if (a.state === 'hidden') { col = HEX.sure; alpha = 0.5 + 0.2 * Math.sin(clock * 6); jit = 0.03; ringMode = 1; haloOp = 0.35 + 0.3 * Math.sin(clock * 6); }
+    if (v.pts) {
+      v.pts.visible = showable;
+      if (showable) {
+        const sp = Math.hypot(a.vx, a.vz); if (sp > 0.1 && a.state !== 'hidden') v.yaw = Math.atan2(a.vx, a.vz);
+        const c = Math.cos(v.yaw), s = Math.sin(v.yaw), arr = v.pts.geometry.attributes.position.array;
+        for (let i = 0; i < v.local.length; i++) { const p = v.local[i]; arr[i * 3] = hx + p[0] * c + p[2] * s; arr[i * 3 + 1] = p[1]; arr[i * 3 + 2] = hz - p[0] * s + p[2] * c; }
+        v.pts.geometry.attributes.position.needsUpdate = true;
+        v.mat.uniforms.uColor.value.copy(raw(col)); v.mat.uniforms.uAlpha.value = alpha; v.mat.uniforms.uJit.value = jit; v.mat.uniforms.uRing.value = ringMode; v.mat.uniforms.uTime.value = clock;
+      }
+    }
+    v.halo.visible = showable;
+    if (showable) { v.halo.position.set(hx, 0.03, hz); v.halo.material.color.set(col); v.halo.material.opacity = Math.max(0.1, haloOp); const sc = a.kind === 'ostacolo' ? 0.6 : (a.kind === 'bici' ? 1.9 : 1); v.halo.scale.setScalar(sc); }
+    // label
+    if (!showable) { lab.hidden = true; continue; }
+    const name = a.label + ' ' + a.id;
+    let text, st;
+    if (a.frozen) { text = name + ' · dalla memoria'; st = 'frozen'; }
+    else if (isDanger && a.fast) { text = name + ' · veloce'; st = 'danger'; }
+    else if (a.state === 'hidden') { text = name + ' · ' + STATE_WORD.hidden(a.g) + ' da ' + fmt(a.hiddenT) + ' s'; st = 'hidden'; }
+    else if (a.state === 'maybe' && a.d > 18) { text = TEXT.maybeFar + ' ' + a.id + ' · forse · ' + Math.round(a.d) + ' m'; st = 'maybe'; }
+    else { text = name + ' · ' + STATE_WORD[a.state](a.g) + ' · ' + fmt(a.d) + ' m' + (a.inPath ? ' · davanti' : ''); st = isDanger ? 'danger' : a.state; }
+    if (lab.textContent !== text) lab.textContent = text;
+    lab.dataset.s = st;
+    const prio = st === 'danger' ? 4 : st === 'hidden' ? 3 : a.inPath ? 2.5 : st === 'sure' ? 2 : 1;
+    queue.push({ el: lab, p: project(hx, a.kind === 'ostacolo' ? 1.15 : (a.seated ? 1.6 : 1.95), hz), prio, d: a.d });
+  }
+  // corridor + danger line
+  const unknown = !S.reliable;
+  corrMat.uniforms.uCol.value.copy(raw(unknown ? HEX.warn : danger ? HEX.danger : HEX.accent));
+  corrMat.uniforms.uA.value = unknown ? 0.18 : danger ? 0.42 + 0.18 * Math.sin(clock * 12) : 0.28;
+  dangerLine.visible = crossMark.visible = !!dangerBike;
+  if (dangerBike) {
+    const tc = (w.x - dangerBike.x) / (Math.abs(dangerBike.vx) > 1e-3 ? dangerBike.vx : 1e-3);
+    const cx = dangerBike.x + dangerBike.vx * tc, cz = dangerBike.z + dangerBike.vz * tc;
+    const pos = dangerLine.geometry.attributes.position.array;
+    pos[0] = dangerBike.x; pos[1] = 0.35; pos[2] = dangerBike.z; pos[3] = cx + dangerBike.vx * 0.3; pos[4] = 0.35; pos[5] = cz + dangerBike.vz * 0.3;
+    dangerLine.geometry.attributes.position.needsUpdate = true;
+    crossMark.position.set(cx, 0.04, cz); crossMark.material.opacity = 0.6 + 0.4 * Math.sin(clock * 14);
+  }
+  // ring labels on the walker's right
+  const rx = -w.hz, rz = w.hx;
+  [2, 5].forEach((r, i) => queue.push({ el: ringLabels[i], p: project(w.x + rx * r, 0.05, w.z + rz * r), prio: 0, d: r }));
+  layoutLabels(queue);
+  follow(camS, lookS, 8.4, 7.2, 10.5, 0, 1 - Math.exp(-dt * 3.0));
+  snap = false;
+
+  // header and rail
+  const st = $('status');
+  const want = S.reliable ? 'ok' : 'bad';
+  if (st.dataset.state !== want) { st.dataset.state = want; $('statusText').textContent = S.reliable ? TEXT.statusOk : TEXT.statusBad; }
+  $('hatch').style.opacity = S.reliable ? '0' : '1';
+  if (!scrubbing) paint(S.t);
+  const sec = Math.floor(S.t);
+  if (sec !== shownSec) { shownSec = sec; scrubEl.setAttribute('aria-valuenow', String(sec)); scrubEl.setAttribute('aria-valuetext', clockText(sec) + ', ' + CH[chapterAt(S.t)].name); }
+}
+
+// ---------------- main loop ----------------
+let last = performance.now();
+function frame(now) {
+  const dt = Math.min(0.05, Math.max(0, (now - last) / 1000)); last = now;
+  if (playing) {
+    let rem = dt;
+    while (rem > 1e-6) { const h = Math.min(rem, 1 / 60); F.step(S, h); F.updateMap(M, S, h); rem -= h; }
+    handleEvents();
+    if (S.t >= L.T) jumpTo(0, true);
+  }
+  updateVisuals(playing ? dt : 0);
+  rR.render(sceneR, camR); rS.render(sceneS, camS);
+  requestAnimationFrame(frame);
+}
+resize();
+jumpTo(14.4, false);   // a still frame worth looking at: the person hidden behind the van
+updateVisuals(0);
+requestAnimationFrame(frame);
+
+</script>

@@ -1,0 +1,56 @@
+{
+  "sourceLanguage" : "en",
+  "strings" : {
+    "Do you want me to start Vedetta?" : {
+      "localizations" : {
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Vuoi che avvii Vedetta?"
+          }
+        }
+      }
+    },
+    "Opens Vedetta and starts guiding you right away." : {
+      "localizations" : {
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apre Vedetta e inizia subito a guidarti."
+          }
+        }
+      }
+    },
+    "Opens Vedetta and goes back to guiding you." : {
+      "localizations" : {
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Apre Vedetta e riprende subito la guida."
+          }
+        }
+      }
+    },
+    "Resume Guidance" : {
+      "localizations" : {
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Riprendi la guida"
+          }
+        }
+      }
+    },
+    "Start Guidance" : {
+      "localizations" : {
+        "it" : {
+          "stringUnit" : {
+            "state" : "translated",
+            "value" : "Avvia la guida"
+          }
+        }
+      }
+    }
+  },
+  "version" : "1.0"
+}

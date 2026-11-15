@@ -1,0 +1,232 @@
+<title>FieldVision Splat Guide</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<style>
+/* Two synced views (the street | the live 3D map) above an Apple-style player.
+   Type is the system font on Apple's text styles; colors are Apple's system colors. The page follows the system
+   appearance, but the views always keep the dark values: they show dark 3D content, like video on Apple platforms. */
+:root, .view {
+  color-scheme: dark;
+  --bg: #000000;
+  --surface: #1C1C1E;
+  --fill: rgba(118, 118, 128, .24);
+  --fill-hover: rgba(118, 118, 128, .36);
+  --track: rgba(255, 255, 255, .22);
+  --label: #FFFFFF;
+  --label-2: rgba(235, 235, 245, .6);
+  --label-3: rgba(235, 235, 245, .3);
+  --accent: #5E5CE6;
+  --accent-hover: #6E6CF0;
+  --accent-text: #7D7AFF;
+  --sure: #64D2FF;
+  --maybe: #FF9F0A;
+  --danger: #FF453A;
+  --warn: #FFD60A;
+  --frozen: #8E8E93;
+  --on-color: #000000;
+  --glass: rgba(30, 30, 32, .55);
+  --glass-edge: rgba(255, 255, 255, .14);
+  --glass-shine: rgba(255, 255, 255, .12);
+  --glass-drop: rgba(0, 0, 0, .25);
+  --sheet: rgba(28, 28, 30, .82);
+}
+@media (prefers-color-scheme: light) {
+  :root {
+    color-scheme: light;
+    --bg: #F2F2F7;
+    --surface: #FFFFFF;
+    --fill: rgba(118, 118, 128, .12);
+    --fill-hover: rgba(118, 118, 128, .2);
+    --track: rgba(0, 0, 0, .12);
+    --label: #000000;
+    --label-2: rgba(60, 60, 67, .75);
+    --label-3: rgba(60, 60, 67, .3);
+    --accent: #5856D6;
+    --accent-hover: #4B49C8;
+    --accent-text: #5856D6;
+    --sure: #0071A4;
+    --warn: #FFCC00;
+    --glass: rgba(255, 255, 255, .65);
+    --glass-edge: rgba(0, 0, 0, .08);
+    --glass-shine: rgba(255, 255, 255, .8);
+    --glass-drop: rgba(0, 0, 0, .08);
+    --sheet: rgba(255, 255, 255, .9);
+  }
+}
+:root {
+  --radius: 20px;
+  --font: -apple-system, BlinkMacSystemFont, 'SF Pro';
+}
+*, *::before, *::after { box-sizing: border-box; }
+[hidden] { display: none !important; }
+html, body { height: 100%; }
+body {
+  margin: 0;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  gap: 12px;
+  padding: 12px max(16px, env(safe-area-inset-right, 0px)) 12px max(16px, env(safe-area-inset-left, 0px));
+  overflow: hidden;
+  background: var(--bg);
+  color: var(--label);
+  font: 400 .9375rem/1.34 var(--font);
+  -webkit-font-smoothing: antialiased;
+}
+button {
+  min-height: 44px;
+  padding: 0 18px;
+  border: 0;
+  border-radius: 999px;
+  background: var(--fill);
+  color: var(--label);
+  font: 600 .9375rem/1 var(--font);
+  cursor: pointer;
+}
+button:hover { background: var(--fill-hover); }
+button:focus-visible { outline: 2px solid var(--accent-text); outline-offset: 2px; }
+.icon-btn { width: 44px; padding: 0; display: grid; place-items: center; flex: none; }
+.icon-btn svg { width: 20px; height: 20px; fill: currentColor; }
+.glass {
+  background: var(--glass);
+  -webkit-backdrop-filter: blur(24px) saturate(1.8);
+  backdrop-filter: blur(24px) saturate(1.8);
+  border: 1px solid var(--glass-edge);
+  box-shadow: inset 0 1px 0 var(--glass-shine), 0 4px 16px var(--glass-drop);
+}
+
+/* Header */
+.top { display: flex; flex-wrap: wrap; align-items: center; gap: 12px 16px; }
+.brand { display: flex; align-items: center; gap: 12px; margin-right: auto; min-width: 0; }
+.mark { width: 40px; height: 40px; flex: none; display: grid; place-items: center; border-radius: 10px; background: var(--accent); }
+.mark svg { width: 24px; height: 24px; }
+h1 { margin: 0; font: 700 1.375rem/1.27 var(--font); }
+.sub { margin: 0; color: var(--label-2); font-size: .8125rem; line-height: 1.385; }
+.status { display: inline-flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 16px; border-radius: 999px; font-weight: 600; }
+.status .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--sure); }
+.status[data-state="bad"] { background: var(--warn); border-color: var(--warn); color: var(--on-color); }
+.status[data-state="bad"] .dot { background: var(--on-color); }
+
+/* The two views */
+.views { position: relative; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 12px; min-height: 0; }
+.view { position: relative; min-width: 0; min-height: 0; overflow: hidden; border-radius: var(--radius); background: var(--surface); color: var(--label); }
+.view canvas { position: absolute; inset: 0; width: 100%; height: 100%; display: block; }
+.tag { position: absolute; z-index: 4; top: 12px; left: 12px; padding: 6px 12px; border-radius: 999px; font-size: .8125rem; line-height: 1.385; font-weight: 600; pointer-events: none; }
+.tag-accent { background: var(--accent); color: #FFFFFF; }
+.dim { position: absolute; inset: 0; z-index: 2; pointer-events: none; opacity: 0; background: radial-gradient(ellipse at 50% 62%, rgba(0, 0, 0, .55), rgba(0, 0, 0, .94)); }
+.hatch { position: absolute; inset: 0; z-index: 3; pointer-events: none; opacity: 0; border-radius: inherit; box-shadow: inset 0 0 0 3px var(--warn); background: rgba(255, 214, 10, .08); transition: opacity .25s; }
+.labels { position: absolute; inset: 0; z-index: 3; pointer-events: none; }
+.lab {
+  position: absolute; left: 0; top: 0; white-space: nowrap;
+  padding: 4px 8px; border-radius: 8px; border: 1px solid var(--label-3);
+  background: rgba(0, 0, 0, .6); color: var(--label);
+  font: 600 .75rem/1.333 var(--font); font-variant-numeric: tabular-nums;
+}
+.lab[data-s="sure"] { color: var(--sure); border-color: var(--sure); }
+.lab[data-s="maybe"] { color: var(--maybe); border: 1px dashed var(--maybe); }
+.lab[data-s="hidden"] { color: var(--sure); border: 1px dotted var(--sure); }
+.lab[data-s="danger"] { color: var(--on-color); background: var(--danger); border-color: var(--danger); }
+.lab[data-s="frozen"] { color: var(--frozen); border-color: var(--frozen); }
+.lab[data-s="ring"] { padding: 0; border: 0; background: none; color: var(--label-2); font-weight: 500; }
+.legend { position: absolute; z-index: 4; left: 12px; bottom: 12px; width: fit-content; max-width: calc(100% - 24px); display: flex; flex-wrap: wrap; gap: 4px 14px; margin: 0; padding: 8px 14px; border-radius: 18px; list-style: none; color: var(--label-2); font-size: .75rem; line-height: 1.333; pointer-events: none; }
+.sw { display: inline-block; width: 10px; height: 10px; margin-right: 6px; border-radius: 50%; vertical-align: -1px; }
+.sw.sure { background: var(--sure); }
+.sw.maybe { border: 2px dashed var(--maybe); }
+.sw.hidden { border: 2px dotted var(--sure); }
+.sw.danger { background: var(--danger); }
+.sw.warn { background: var(--warn); }
+
+/* Start card */
+.start { position: absolute; inset: 0; z-index: 10; display: grid; place-items: center; padding: 16px; background: rgba(0, 0, 0, .45); }
+.card { width: min(560px, 100%); max-height: 100%; overflow: auto; padding: 28px; border-radius: 28px; background: var(--sheet); }
+.card h2 { margin: 0 0 8px; font: 700 1.75rem/1.214 var(--font); text-wrap: balance; }
+.card p { margin: 0; color: var(--label-2); font-size: 1.0625rem; line-height: 1.294; }
+.cta { display: flex; flex-wrap: wrap; gap: 12px; margin: 24px 0 16px; }
+.cta button { padding: 0 24px; font-size: 1.0625rem; }
+.cta .primary { background: var(--accent); color: #FFFFFF; }
+.cta .primary:hover { background: var(--accent-hover); }
+.card .note { font-size: .8125rem; line-height: 1.385; }
+
+/* Subtitles: white text on a dark box per line, centered at the bottom of the street view, like Apple's */
+.subtitles { position: absolute; z-index: 4; left: 50%; bottom: 20px; transform: translateX(-50%); width: max-content; max-width: calc(100% - 48px); display: flex; flex-direction: column; align-items: center; gap: 4px; text-align: center; pointer-events: none; }
+.subtitles p { margin: 0; }
+.subtitles span { padding: 2px 10px; border-radius: 6px; background: rgba(0, 0, 0, .75); color: #FFFFFF; font: 600 clamp(1.0625rem, .8rem + .9vw, 1.5rem)/1.5 var(--font); -webkit-box-decoration-break: clone; box-decoration-break: clone; }
+
+/* Rail: an Apple-style player */
+.rail { display: flex; justify-content: center; }
+.player { display: flex; align-items: center; gap: 8px; width: min(640px, 100%); padding: 6px 10px; border-radius: 999px; }
+.player .icon-btn { background: transparent; }
+.player .icon-btn:hover { background: var(--fill); }
+.player .icon-btn[aria-pressed="false"] { color: var(--label-2); }
+.scrub { position: relative; flex: 1; min-width: 0; height: 44px; display: flex; align-items: center; border-radius: 999px; cursor: pointer; touch-action: none; }
+.scrub:focus { outline: none; }
+.track { display: flex; gap: 3px; width: 100%; height: 8px; }
+.seg { position: relative; min-width: 0; height: 100%; overflow: hidden; border-radius: 4px; background: var(--track); }
+.seg i { position: absolute; inset: 0 auto 0 0; width: 0; background: var(--label); }
+.tip { position: absolute; bottom: calc(100% + 8px); left: 0; padding: 6px 12px; border-radius: 999px; white-space: nowrap; font-size: .8125rem; line-height: 1.385; font-weight: 600; font-variant-numeric: tabular-nums; pointer-events: none; }
+
+@media (max-width: 860px) {
+  body { height: auto; min-height: 100%; overflow: auto; }
+  .views { grid-template-columns: minmax(0, 1fr); }
+  .view { height: 46vh; min-height: 250px; }
+  .start { position: fixed; }
+}
+</style>
+
+<header class="top">
+  <div class="brand">
+    <span class="mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round"><circle cx="6" cy="12" r="1.6" fill="#FFFFFF" stroke="none"/><path d="M10 8.5a5 5 0 0 1 0 7"/><path d="M13.5 5.5a9 9 0 0 1 0 13"/><path d="M17 2.8a13 13 0 0 1 0 18.4" stroke-dasharray="2.5 2.5"/></svg></span>
+    <div>
+      <h1>FieldVision</h1>
+      <p class="sub">Guida per pedoni non vedenti, con la sola fotocamera di iPhone.</p>
+    </div>
+  </div>
+  <div class="status glass" id="status" data-state="ok">
+    <span class="dot" aria-hidden="true"></span>
+    <span id="statusText" role="status">Guida affidabile</span>
+  </div>
+</header>
+
+<main class="views" id="views">
+  <section class="view" aria-label="La strada vera">
+    <canvas id="cReal"></canvas>
+    <div class="dim" id="dim"></div>
+    <span class="tag glass">Realtà</span>
+    <div class="subtitles" id="subtitles" aria-live="polite">
+      <p hidden><span id="cue"></span></p>
+      <p><span id="caption">Guida attiva. Vedo solo davanti.</span></p>
+    </div>
+  </section>
+  <section class="view" aria-label="La mappa 3D che iPhone costruisce dal vivo">
+    <canvas id="cSplat"></canvas>
+    <div class="labels" id="labels"></div>
+    <div class="hatch" id="hatch"></div>
+    <span class="tag tag-accent">Mappa 3D dal vivo</span>
+    <ul class="legend glass">
+      <li><span class="sw sure"></span>Confermato</li>
+      <li><span class="sw maybe"></span>Forse</li>
+      <li><span class="sw hidden"></span>Nascosto</li>
+      <li><span class="sw danger"></span>Pericolo</li>
+      <li><span class="sw warn"></span>Non affidabile</li>
+    </ul>
+  </section>
+
+  <div class="start" id="start">
+    <div class="card glass">
+      <h2>Ascolta come FieldVision guida un pedone non vedente</h2>
+      <p>A sinistra la strada vera, a destra la mappa 3D che iPhone costruisce mentre la persona cammina. Per sentire voce e suoni, usa le cuffie.</p>
+      <div class="cta">
+        <button class="primary" id="goAudio" type="button">Avvia con audio</button>
+        <button id="goSilent" type="button">Avvia senza audio</button>
+      </div>
+      <p class="note">Scena simulata: tempi e valori illustrano l’idea, non sono misure.</p>
+    </div>
+  </div>
+</main>
+
+<footer class="rail">
+  <div class="player glass">
+    <button class="icon-btn" id="btnPlay" type="button" aria-label="Riproduci"></button>
+    <div class="scrub" id="scrub" role="slider" tabindex="0" aria-label="Posizione nella scena"><div class="track" id="track"></div><span class="tip glass" id="tip" hidden></span></div>
+    <button class="icon-btn" id="btnCaptions" type="button" aria-label="Sottotitoli" aria-pressed="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h16a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2h-8l-5 4v-4H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M6 10h4M12 10h6M6 13.5h7M15 13.5h3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
+    <button class="icon-btn" id="btnAudio" type="button" aria-label="Attiva audio"></button>
+  </div>
+</footer>
