@@ -1,0 +1,60 @@
+{
+  "it": {
+    "voice": "it-IT-IsabellaNeural",
+    "rate": "+5%",
+    "lines": {
+      "Guida attiva. Vedo solo davanti.": "it/guida-attiva-vedo-solo-davanti.mp3",
+      "Guida non affidabile: troppo buio": "it/guida-non-affidabile-troppo-buio.mp3",
+      "Guida di nuovo attiva": "it/guida-di-nuovo-attiva.mp3",
+      "Persona davanti": "it/persona-davanti.mp3",
+      "Bici davanti": "it/bici-davanti.mp3",
+      "Ostacolo davanti": "it/ostacolo-davanti.mp3",
+      "Persona nascosta, a sinistra": "it/persona-nascosta-a-sinistra.mp3",
+      "Persona nascosta, a destra": "it/persona-nascosta-a-destra.mp3",
+      "Bici nascosta, a sinistra": "it/bici-nascosta-a-sinistra.mp3",
+      "Bici nascosta, a destra": "it/bici-nascosta-a-destra.mp3",
+      "Ostacolo nascosto, a sinistra": "it/ostacolo-nascosto-a-sinistra.mp3",
+      "Ostacolo nascosto, a destra": "it/ostacolo-nascosto-a-destra.mp3",
+      "Persona riapparsa, a sinistra": "it/persona-riapparsa-a-sinistra.mp3",
+      "Persona riapparsa, a destra": "it/persona-riapparsa-a-destra.mp3",
+      "Bici riapparsa, a sinistra": "it/bici-riapparsa-a-sinistra.mp3",
+      "Bici riapparsa, a destra": "it/bici-riapparsa-a-destra.mp3",
+      "Ostacolo riapparso, a sinistra": "it/ostacolo-riapparso-a-sinistra.mp3",
+      "Ostacolo riapparso, a destra": "it/ostacolo-riapparso-a-destra.mp3",
+      "Persona persa di vista": "it/persona-persa-di-vista.mp3",
+      "Bici persa di vista": "it/bici-persa-di-vista.mp3",
+      "Ostacolo perso di vista": "it/ostacolo-perso-di-vista.mp3",
+      "Veloce a sinistra!": "it/veloce-a-sinistra.mp3",
+      "Veloce a destra!": "it/veloce-a-destra.mp3"
+    }
+  },
+  "en": {
+    "voice": "en-US-AvaNeural",
+    "rate": "+5%",
+    "lines": {
+      "Guide on. I can only see ahead.": "en/guide-on-i-can-only-see-ahead.mp3",
+      "Guide unreliable: too dark": "en/guide-unreliable-too-dark.mp3",
+      "Guide on again": "en/guide-on-again.mp3",
+      "Person ahead": "en/person-ahead.mp3",
+      "Bike ahead": "en/bike-ahead.mp3",
+      "Obstacle ahead": "en/obstacle-ahead.mp3",
+      "Person hidden, on the left": "en/person-hidden-on-the-left.mp3",
+      "Person hidden, on the right": "en/person-hidden-on-the-right.mp3",
+      "Bike hidden, on the left": "en/bike-hidden-on-the-left.mp3",
+      "Bike hidden, on the right": "en/bike-hidden-on-the-right.mp3",
+      "Obstacle hidden, on the left": "en/obstacle-hidden-on-the-left.mp3",
+      "Obstacle hidden, on the right": "en/obstacle-hidden-on-the-right.mp3",
+      "Person back in view, on the left": "en/person-back-in-view-on-the-left.mp3",
+      "Person back in view, on the right": "en/person-back-in-view-on-the-right.mp3",
+      "Bike back in view, on the left": "en/bike-back-in-view-on-the-left.mp3",
+      "Bike back in view, on the right": "en/bike-back-in-view-on-the-right.mp3",
+      "Obstacle back in view, on the left": "en/obstacle-back-in-view-on-the-left.mp3",
+      "Obstacle back in view, on the right": "en/obstacle-back-in-view-on-the-right.mp3",
+      "Person lost from view": "en/person-lost-from-view.mp3",
+      "Bike lost from view": "en/bike-lost-from-view.mp3",
+      "Obstacle lost from view": "en/obstacle-lost-from-view.mp3",
+      "Fast on the left!": "en/fast-on-the-left.mp3",
+      "Fast on the right!": "en/fast-on-the-right.mp3"
+    }
+  }
+}

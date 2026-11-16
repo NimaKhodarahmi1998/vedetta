@@ -9,7 +9,7 @@ for (let i = 0; i < F.L.T / dt; i++) {
   F.step(S, dt); F.updateMap(M, S, dt);
   for (const e of S.events) {
     if (e.type === 'tick') continue;
-    out.push(`${e.t.toFixed(2).padStart(6)}  ${e.type.padEnd(6)} ${e.text ? '«' + e.text + '»' : ''} ${e.sfx || e.pattern || ''} ${e.d ? 'd=' + e.d.toFixed(1) : ''}`);
+    out.push(`${e.t.toFixed(2).padStart(6)}  ${e.type.padEnd(6)} ${e.type === 'say' ? '«' + F.lineText('it', e) + '» «' + F.lineText('en', e) + '»' : ''} ${e.sfx || e.pattern || ''} ${e.d ? 'd=' + e.d.toFixed(1) : ''}`);
   }
   S.events.length = 0;
   for (const a of S.agents) {

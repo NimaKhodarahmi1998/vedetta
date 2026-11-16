@@ -33,33 +33,54 @@
     [61.0, -0.3, 58.6],
   ];
 
+  // Each object's name in both languages. g is its Italian gender ending: 'a' or 'o'.
+  const PERSON = { it: 'Persona', en: 'Person' };
   const AGENTS = [
-    { id: 1, kind: 'persona', label: 'Persona', g: 'a',
+    { id: 1, kind: 'persona', name: PERSON, g: 'a',
       path: [[0, -0.35, 14.0], [9.8, -0.35, 14.0], [12.2, 2.4, 17.6], [13.8, 4.1, 20.2], [15.2, 4.1, 22.6], [16.9, 1.0, 25.0], [17.9, 0.8, 26.5], [23.5, 0.8, 33.5], [32.7, 0.8, 45], [56, 0.8, 74], [61, 0.8, 74]] },
-    { id: 2, kind: 'bici', label: 'Bici', g: 'a', fast: true,
+    { id: 2, kind: 'bici', name: { it: 'Bici', en: 'Bike' }, g: 'a', fast: true,
       path: [[0, -16, 27.5], [19.97, -16, 27.5], [23.97, 6.5, 27.5], [61, 6.5, 27.5]] },
-    { id: 3, kind: 'persona', label: 'Persona', g: 'a', path: [[0, -2.9, 47], [39, -2.9, 0], [61, -2.9, -26]] },
-    { id: 4, kind: 'persona', label: 'Persona', g: 'a', path: [[0, 4.2, 66], [61, 4.2, 6]] },
-    { id: 5, kind: 'persona', label: 'Persona', g: 'a', seated: true, path: [[0, -4.1, 32.6], [61, -4.1, 32.6]] },
-    { id: 6, kind: 'ostacolo', label: 'Ostacolo', g: 'o', fixed: true, path: [[0, -0.55, 50], [61, -0.55, 50]] },
+    { id: 3, kind: 'persona', name: PERSON, g: 'a', path: [[0, -2.9, 47], [39, -2.9, 0], [61, -2.9, -26]] },
+    { id: 4, kind: 'persona', name: PERSON, g: 'a', path: [[0, 4.2, 66], [61, 4.2, 6]] },
+    { id: 5, kind: 'persona', name: PERSON, g: 'a', seated: true, path: [[0, -4.1, 32.6], [61, -4.1, 32.6]] },
+    { id: 6, kind: 'ostacolo', name: { it: 'Ostacolo', en: 'Obstacle' }, g: 'o', fixed: true, path: [[0, -0.55, 50], [61, -0.55, 50]] },
   ];
 
-  // Every spoken line. a is the object, side is 'sinistra' or 'destra'.
+  // Every spoken line, in each language. a is the object, side is 'left' or 'right'.
   const VOICE = {
-    start: 'Guida attiva. Vedo solo davanti.',
-    dark: 'Guida non affidabile: troppo buio',
-    light: 'Guida di nuovo attiva',
-    ahead: (a) => a.label + ' davanti',
-    hidden: (a, side) => a.label + ' nascost' + a.g + ', a ' + side,
-    back: (a, side) => a.label + ' riapparsa, a ' + side,
-    lost: (a) => a.label + ' pers' + a.g + ' di vista',
-    fast: (a, side) => 'Veloce a ' + side + '!',
+    it: {
+      start: () => 'Guida attiva. Vedo solo davanti.',
+      dark: () => 'Guida non affidabile: troppo buio',
+      light: () => 'Guida di nuovo attiva',
+      ahead: (a) => a.name.it + ' davanti',
+      hidden: (a, side) => a.name.it + ' nascost' + a.g + ', a ' + SIDE.it[side],
+      back: (a, side) => a.name.it + ' riappars' + a.g + ', a ' + SIDE.it[side],
+      lost: (a) => a.name.it + ' pers' + a.g + ' di vista',
+      fast: (a, side) => 'Veloce a ' + SIDE.it[side] + '!',
+    },
+    en: {
+      start: () => 'Guide on. I can only see ahead.',
+      dark: () => 'Guide unreliable: too dark',
+      light: () => 'Guide on again',
+      ahead: (a) => a.name.en + ' ahead',
+      hidden: (a, side) => a.name.en + ' hidden, on the ' + side,
+      back: (a, side) => a.name.en + ' back in view, on the ' + side,
+      lost: (a) => a.name.en + ' lost from view',
+      fast: (a, side) => 'Fast on the ' + side + '!',
+    },
   };
+  const SIDE = { it: { left: 'sinistra', right: 'destra' } };
+  // The text of a spoken event, in a language.
+  const lineText = (lang, ev) => VOICE[lang][ev.line](AGENTS.find(a => a.id === ev.agent), ev.side);
 
   // Timeline checkpoints, one per case the scene shows.
   const CHAPTERS = [
-    { t: 0, name: 'Avvio' }, { t: 7.5, name: 'Persona davanti' }, { t: 12.5, name: 'Persona nascosta' },
-    { t: 20.2, name: 'Bici veloce' }, { t: 33.6, name: 'Troppo buio' }, { t: 45.2, name: 'Ostacolo' },
+    { t: 0, name: { it: 'Avvio', en: 'Start' } },
+    { t: 7.5, name: { it: 'Persona davanti', en: 'Person ahead' } },
+    { t: 12.5, name: { it: 'Persona nascosta', en: 'Hidden person' } },
+    { t: 20.2, name: { it: 'Bici veloce', en: 'Fast bike' } },
+    { t: 33.6, name: { it: 'Troppo buio', en: 'Too dark' } },
+    { t: 45.2, name: { it: 'Ostacolo', en: 'Obstacle' } },
   ];
 
   function samplePath(path, t) {
@@ -271,8 +292,9 @@
   }
 
   function emit(S, type, extra) { S.events.push(Object.assign({ type, t: S.t }, extra || {})); }
-  function say(S, text, priority, sfx) {
-    const ev = { type: 'say', text, priority: !!priority, sfx: sfx || null, t: S.t };
+  // A spoken line, as its VOICE key, object and side, so the app can say it in either language.
+  function say(S, line, a, side, priority, sfx) {
+    const ev = { type: 'say', line, agent: a ? a.id : null, side: side || null, priority: !!priority, sfx: sfx || null, t: S.t };
     if (priority || S.t - S.lastSayT >= 1.7) { S.lastSayT = S.t; S.events.push(ev); if (priority) S.pending = null; }
     else S.pending = ev;
   }
@@ -287,17 +309,17 @@
       S.w.hx += (v.x / sp - S.w.hx) * k; S.w.hz += (v.z / sp - S.w.hz) * k;
       const n = Math.hypot(S.w.hx, S.w.hz); S.w.hx /= n; S.w.hz /= n;
     }
-    if (!S.started && t >= 0.4) { S.started = true; say(S, VOICE.start, true, null); S.lastTick = t - 1.2; }
+    if (!S.started && t >= 0.4) { S.started = true; say(S, 'start', null, null, true, null); S.lastTick = t - 1.2; }
     // self-check: is the picture good enough to guide?
     const dark = S.w.z > L.passage.z0 + 0.3 && S.w.z < L.passage.z1;
     const target = dark ? 0.14 : 0.93;
     S.trust += (target - S.trust) * Math.min(1, dt * 7);
     if (S.reliable) {
       S.belowT = S.trust < 0.45 ? S.belowT + dt : 0;
-      if (S.belowT >= 0.3) { S.reliable = false; S.aboveT = 0; S.lastBuzz = t; say(S, VOICE.dark, true, 'long'); }
+      if (S.belowT >= 0.3) { S.reliable = false; S.aboveT = 0; S.lastBuzz = t; say(S, 'dark', null, null, true, 'long'); }
     } else {
       S.aboveT = S.trust >= 0.45 ? S.aboveT + dt : 0;
-      if (S.aboveT >= 1.0) { S.reliable = true; S.belowT = 0; S.lastTick = t; say(S, VOICE.light, true, 'rising'); }
+      if (S.aboveT >= 1.0) { S.reliable = true; S.belowT = 0; S.lastTick = t; say(S, 'light', null, null, true, 'rising'); }
     }
     if (S.started && S.reliable && t - S.lastTick >= 2.0) { S.lastTick = t; emit(S, 'tick'); }
     if (!S.reliable && t - S.lastBuzz >= 4.0) { S.lastBuzz = t; emit(S, 'haptic', { pattern: 'long' }); }
@@ -308,7 +330,7 @@
       a.x = ap.x; a.z = ap.z; a.vx = av.x; a.vz = av.z;
       const s = sight(S.w, a.x, a.z);
       a.d = s.d; a.ang = s.ang;
-      const side = s.ang > 0 ? 'sinistra' : 'destra';
+      const side = s.ang > 0 ? 'left' : 'right';
       a.ahead = (a.x - S.w.x) * S.w.hx + (a.z - S.w.z) * S.w.hz;
       a.lat = (a.x - S.w.x) * S.w.hz - (a.z - S.w.z) * S.w.hx;
       a.danger = false;
@@ -319,12 +341,12 @@
         a.conf = Math.min(1, a.conf + dt * (a.fast ? 7 : 2.6 * Math.exp(-s.d / 7)));
         a.gx = a.x; a.gz = a.z; a.gvx = a.vx; a.gvz = a.vz; a.hiddenT = 0;
         a.state = a.conf >= 0.6 ? 'sure' : 'maybe';
-        if (was === 'hidden' && a.wasSure) say(S, VOICE.back(a, side), false, 'knock');
+        if (was === 'hidden' && a.wasSure) say(S, 'back', a, side, false, 'knock');
         if (a.state === 'sure') a.wasSure = true;
       } else if (s.inFov && !s.wall && !s.dark && s.occl && (a.state === 'sure' || a.state === 'maybe' || a.state === 'hidden')) {
-        if (a.state !== 'hidden') { a.state = 'hidden'; a.hiddenT = 0; if (a.wasSure) say(S, VOICE.hidden(a, side), false, 'flutter'); }
+        if (a.state !== 'hidden') { a.state = 'hidden'; a.hiddenT = 0; if (a.wasSure) say(S, 'hidden', a, side, false, 'flutter'); }
         a.hiddenT += dt; a.gx += a.gvx * dt; a.gz += a.gvz * dt;
-        if (a.hiddenT > 3.0) { a.state = 'lost'; a.wasSure = false; say(S, VOICE.lost(a), false, null); }
+        if (a.hiddenT > 3.0) { a.state = 'lost'; a.wasSure = false; say(S, 'lost', a, null, false, null); }
       } else {
         if (a.state === 'sure' || a.state === 'maybe' || a.state === 'hidden') a.state = 'out';
         a.conf = Math.max(0, a.conf - dt * 0.12);
@@ -335,7 +357,7 @@
         const tc = (S.w.x - a.x) / (Math.abs(a.vx) > 1e-3 ? a.vx : 1e-3);
         if (tc > -0.4 && tc < 2.5 && a.ahead > 0 && a.ahead < 9) {
           a.danger = true;
-          if (!a.fastSaid) { a.fastSaid = true; say(S, VOICE.fast(a, side), true, 'fast'); }
+          if (!a.fastSaid) { a.fastSaid = true; say(S, 'fast', a, side, true, 'fast'); }
         }
       }
       // something sure in the walking path
@@ -343,7 +365,7 @@
       const inPath = a.state === 'sure' && a.ahead > 0.3 && a.ahead < L.corridorLen && Math.abs(a.lat) < halfW;
       if (inPath) {
         a.offT = 0;
-        if (!a.said && !a.fast) { a.said = true; say(S, VOICE.ahead(a), false, 'knock'); }
+        if (!a.said && !a.fast) { a.said = true; say(S, 'ahead', a, null, false, 'knock'); }
         if (a.ahead < 3.5) a.danger = true;
         if (a.kind === 'ostacolo' && a.ahead < 5.0) {
           const iv = Math.max(0.12, 0.12 + ((a.ahead - 1.0) / 4.0) * 0.68);
@@ -356,5 +378,5 @@
     if (S.pending && t - S.lastSayT >= 1.7) { const ev = S.pending; S.pending = null; S.lastSayT = t; ev.t = t; S.events.push(ev); }
   }
 
-  root.FVSim = { L, WALKER, AGENTS, VOICE, CHAPTERS, samplePath, velocity, sight, buildMap, updateMap, makeSim, step, rng, inPassage };
+  root.FVSim = { L, WALKER, AGENTS, VOICE, lineText, CHAPTERS, samplePath, velocity, sight, buildMap, updateMap, makeSim, step, rng, inPassage };
 })(typeof window !== 'undefined' ? window : globalThis);

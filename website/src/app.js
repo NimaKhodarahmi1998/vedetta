@@ -2,18 +2,14 @@ import * as THREE from 'three';
 
 const F = window.FVSim, L = F.L;
 const $ = (id) => document.getElementById(id);
-const fmt = (v, d = 1) => v.toFixed(d).replace('.', ',');
+// The language and its interface text (text.js). Spoken lines, names and checkpoints come from sim-core.js.
+let lang = window.FVText.lang, T = window.FVText.TEXT[lang];
+const fmt = (v, d = 1) => v.toFixed(d).replace('.', T.decimal);
 // Colors are defined once, as CSS tokens in shell.html, so the 3D scenes and the interface never drift apart.
 // They're read from a view, which keeps the dark values in both appearances.
 const viewStyle = getComputedStyle(document.querySelector('.view'));
 const token = (name) => viewStyle.getPropertyValue('--' + name).trim();
 const HEX = { accent: token('accent'), sure: token('sure'), maybe: token('maybe'), danger: token('danger'), warn: token('warn'), grey: token('frozen'), bg: token('bg') };
-const TEXT = {
-  play: 'Riproduci', pause: 'Pausa',
-  audioOff: 'Attiva audio', audioOn: 'Disattiva audio',
-  statusOk: 'Guida affidabile', statusBad: 'Guida non affidabile: troppo buio',
-  maybeFar: 'Oggetto',
-};
 const ICON = {
   play: '<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13a1 1 0 0 0 1.5.86l10.5-6.5a1 1 0 0 0 0-1.72L9.5 4.64A1 1 0 0 0 8 5.5z"/></svg>',
   pause: '<svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="5" width="4" height="14" rx="1"/><rect x="14" y="5" width="4" height="14" rx="1"/></svg>',
@@ -397,7 +393,8 @@ function initAudio() {
     AC = new (window.AudioContext || window.webkitAudioContext)();
     master = AC.createGain(); master.gain.value = 0.9;
     const comp = AC.createDynamicsCompressor(); master.connect(comp); comp.connect(AC.destination);
-  } catch (e) { AC = null; }
+  } catch (e) { AC = null; return; }
+  loadVoice();
 }
 function tone(f, type, at, a, d, peak, f2, lp) {
   const o = AC.createOscillator(), g = AC.createGain();
@@ -423,25 +420,80 @@ function sfx(name) {
   try { SFX[name](AC.currentTime + 0.01); } catch (e) { /* audio is optional */ }
   try { if (navigator.vibrate && VIB[name]) navigator.vibrate(VIB[name]); } catch (e) { /* not every device vibrates */ }
 }
-let itVoice = null;
-function pickVoice() { try { const vs = speechSynthesis.getVoices(); itVoice = vs.find(v => /^it[-_]IT/i.test(v.lang)) || vs.find(v => /^it/i.test(v.lang)) || null; } catch (e) { itVoice = null; } }
-if ('speechSynthesis' in window) { pickVoice(); try { speechSynthesis.addEventListener('voiceschanged', pickVoice); } catch (e) { /* older browsers */ } }
-function speak(text, priority) {
-  if (!audioOn || !('speechSynthesis' in window)) return;
+// Every spoken line is a recording of a natural voice in each language (made by voice.py, embedded by build.py
+// as window.FVVoice). It plays through Web Audio once the line's cue sound ends, trimmed to the speech itself.
+// A line with no recording, or a browser that can't decode one, falls back to the browser's own speech.
+const CUE_LEN = { knock: 0.2, flutter: 0.2, fast: 0.38, long: 1.1, rising: 0.32 };
+const clips = new Map();
+const voiceSrc = new Set();
+let voiceGen = 0, voiceEnd = 0;
+// Skips the silence around the speech, keeping a few milliseconds so the first and last sounds aren't clipped.
+function trimmed(buf) {
+  const d = buf.getChannelData(0); let i = 0, j = d.length - 1;
+  while (i < j && Math.abs(d[i]) < 0.01) i++;
+  while (j > i && Math.abs(d[j]) < 0.01) j--;
+  const from = Math.max(0, i / buf.sampleRate - 0.02), to = Math.min(buf.duration, j / buf.sampleRate + 0.08);
+  return { buf, from, len: to - from };
+}
+function loadVoice() {
+  for (const [text, b64] of Object.values(window.FVVoice || {}).flatMap(Object.entries)) {
+    try {
+      const bytes = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+      const clip = AC.decodeAudioData(bytes.buffer).then(trimmed);
+      clip.catch(() => clips.delete(text));
+      clips.set(text, clip);
+    } catch (e) { /* the browser's speech says this line */ }
+  }
+}
+function speak(text, priority, cue) {
+  if (!audioOn) return;
+  const clip = AC && clips.get(text);
+  if (!clip) { speakBrowser(text, priority); return; }
+  if (priority) hush();
+  const gen = voiceGen, at = AC.currentTime + (CUE_LEN[cue] || 0) + 0.01;
+  clip.then((c) => {
+    if (gen !== voiceGen || !audioOn) return; // hushed while the clip was decoding
+    const src = AC.createBufferSource(); src.buffer = c.buf; src.connect(master);
+    // Like speechSynthesis, a line that isn't urgent waits for the one already speaking.
+    const start = Math.max(at, AC.currentTime, voiceEnd);
+    src.start(start, c.from, c.len); voiceEnd = start + c.len;
+    voiceSrc.add(src); src.onended = () => voiceSrc.delete(src);
+  }, () => speakBrowser(text, priority));
+}
+// The browser's best voice for each language, preferring its natural-sounding ones.
+const browserVoice = {};
+function pickVoices() {
+  try {
+    const all = speechSynthesis.getVoices();
+    for (const [code, text] of Object.entries(window.FVText.TEXT)) {
+      const vs = all.filter(v => v.lang.toLowerCase().startsWith(code));
+      browserVoice[code] = vs.find(v => /natural|premium|enhanced|google/i.test(v.name)) || vs.find(v => v.lang.replace('_', '-') === text.speech) || vs[0] || null;
+    }
+  } catch (e) { /* the browser picks one */ }
+}
+if ('speechSynthesis' in window) { pickVoices(); try { speechSynthesis.addEventListener('voiceschanged', pickVoices); } catch (e) { /* older browsers */ } }
+function speakBrowser(text, priority) {
+  if (!('speechSynthesis' in window)) return;
   try {
     if (priority) speechSynthesis.cancel();
-    const u = new SpeechSynthesisUtterance(text); u.lang = 'it-IT'; if (itVoice) u.voice = itVoice; u.rate = 1.08;
+    const u = new SpeechSynthesisUtterance(text); u.lang = T.speech; if (browserVoice[lang]) u.voice = browserVoice[lang]; u.rate = 1.08;
     speechSynthesis.speak(u);
   } catch (e) { /* captions still show the line */ }
 }
-function hush() { try { if ('speechSynthesis' in window) speechSynthesis.cancel(); } catch (e) { /* nothing to stop */ } }
+function hush() {
+  voiceGen++; voiceEnd = 0;
+  for (const src of voiceSrc) try { src.stop(); } catch (e) { /* already stopped */ }
+  voiceSrc.clear();
+  try { if ('speechSynthesis' in window) speechSynthesis.cancel(); } catch (e) { /* nothing to stop */ }
+}
 
-// Sound cues, shown in brackets above the spoken line like SDH subtitles. The tick has none: it plays every 2 s.
-const SOUND_CUE = { knock: 'Un colpo', flutter: 'Fremito', fast: 'Due impulsi forti', long: 'Lungo-lungo', rising: 'Due colpi in salita', prox: 'Bip sempre più rapidi' };
+// The subtitles keep the spoken event and the cue, not their text, so a language change can redraw them.
 const captionEl = $('caption'), cueEl = $('cue');
-function setCaption(text) { captionEl.textContent = text; }
+let shownLine = null, shownCue = null;
+function setCaption(ev) { shownLine = ev; captionEl.textContent = F.lineText(lang, ev || { line: 'start' }); }
 function setCue(name) {
-  const cue = SOUND_CUE[name];
+  shownCue = name;
+  const cue = T.cue[name];
   cueEl.textContent = cue ? '[' + cue + ']' : '';
   cueEl.parentElement.hidden = !cue;
 }
@@ -451,7 +503,7 @@ function handleEvents() {
     if (e.type === 'tick') { sfx('tick'); waveT = S.t; }
     else if (e.type === 'haptic') { sfx(e.pattern); setCue(e.pattern); }
     else if (e.type === 'prox') { sfx('prox'); setCue('prox'); }
-    else if (e.type === 'say') { setCaption(e.text); setCue(e.sfx); if (e.sfx) sfx(e.sfx); speak(e.text, e.priority); }
+    else if (e.type === 'say') { setCaption(e); setCue(e.sfx); if (e.sfx) sfx(e.sfx); speak(F.lineText(lang, e), e.priority, e.sfx); }
   }
   S.events.length = 0;
 }
@@ -468,18 +520,27 @@ function jumpTo(t, play) {
     S.events.length = 0;
   }
   confAttr.needsUpdate = true; snap = true; waveT = -99;
-  setCaption(last ? last.text : F.VOICE.start);
+  setCaption(last);
   setCue(last ? last.sfx : null);
   playing = !!play; syncButtons();
 }
 function syncButtons() {
   const play = $('btnPlay'), audio = $('btnAudio');
   play.innerHTML = playing ? ICON.pause : ICON.play;
-  play.setAttribute('aria-label', playing ? TEXT.pause : TEXT.play);
+  play.setAttribute('aria-label', playing ? T.pause : T.play);
   audio.innerHTML = audioOn ? ICON.audioOn : ICON.audioOff;
-  audio.setAttribute('aria-label', audioOn ? TEXT.audioOn : TEXT.audioOff);
+  audio.setAttribute('aria-label', audioOn ? T.audioOn : T.audioOff);
 }
 function closeStart() { $('start').hidden = true; }
+// Switches every word on the page, and the voice, to the other language. A line already speaking stops.
+function setLang(next) {
+  if (next === lang || !window.FVText.TEXT[next]) return;
+  lang = next; T = window.FVText.TEXT[lang];
+  window.FVText.apply(lang); window.FVText.save(lang);
+  hush(); setCaption(shownLine); setCue(shownCue); syncButtons();
+  $('status').dataset.state = ''; shownSec = -1; // the next frame redraws the status and the slider's spoken value
+}
+for (const b of document.querySelectorAll('[data-lang]')) b.addEventListener('click', () => setLang(b.dataset.lang));
 
 // Scrubber: one segment per checkpoint, like chapters in Apple's player. Click or drag to jump, arrow keys go
 // between checkpoints. The jump happens on release, because each one replays the scene from 0.
@@ -507,7 +568,7 @@ function timeAt(x) {
 }
 function showTip(x, t) {
   const r = scrubEl.getBoundingClientRect();
-  tipEl.textContent = CH[chapterAt(t)].name + ' · ' + clockText(Math.floor(t));
+  tipEl.textContent = CH[chapterAt(t)].name[lang] + ' · ' + clockText(Math.floor(t));
   tipEl.hidden = false;
   tipEl.style.left = Math.min(Math.max(0, x - r.left - tipEl.offsetWidth / 2), r.width - tipEl.offsetWidth) + 'px';
 }
@@ -559,7 +620,6 @@ function follow(cam, look, back, up, ahead, lookY, k) {
   else { cam.position.x += (tx - cam.position.x) * k; cam.position.y += (up - cam.position.y) * k; cam.position.z += (tz - cam.position.z) * k; look.x += (lx - look.x) * k; look.y += (lookY - look.y) * k; look.z += (lz - look.z) * k; }
   cam.lookAt(look);
 }
-const STATE_WORD = { maybe: () => 'forse', sure: (g) => g === 'o' ? 'confermato' : 'confermata', hidden: (g) => g === 'o' ? 'nascosto' : 'nascosta' };
 let frozenK = 0, clock = 0;
 
 function updateVisuals(dt) {
@@ -622,13 +682,13 @@ function updateVisuals(dt) {
     if (showable) { v.halo.position.set(hx, 0.03, hz); v.halo.material.color.set(col); v.halo.material.opacity = Math.max(0.1, haloOp); const sc = a.kind === 'ostacolo' ? 0.6 : (a.kind === 'bici' ? 1.9 : 1); v.halo.scale.setScalar(sc); }
     // label
     if (!showable) { lab.hidden = true; continue; }
-    const name = a.label + ' ' + a.id;
+    const W = T.tag, name = a.name[lang] + ' ' + a.id;
     let text, st;
-    if (a.frozen) { text = name + ' · dalla memoria'; st = 'frozen'; }
-    else if (isDanger && a.fast) { text = name + ' · veloce'; st = 'danger'; }
-    else if (a.state === 'hidden') { text = name + ' · ' + STATE_WORD.hidden(a.g) + ' da ' + fmt(a.hiddenT) + ' s'; st = 'hidden'; }
-    else if (a.state === 'maybe' && a.d > 18) { text = TEXT.maybeFar + ' ' + a.id + ' · forse · ' + Math.round(a.d) + ' m'; st = 'maybe'; }
-    else { text = name + ' · ' + STATE_WORD[a.state](a.g) + ' · ' + fmt(a.d) + ' m' + (a.inPath ? ' · davanti' : ''); st = isDanger ? 'danger' : a.state; }
+    if (a.frozen) { text = name + ' · ' + W.memory; st = 'frozen'; }
+    else if (isDanger && a.fast) { text = name + ' · ' + W.fast; st = 'danger'; }
+    else if (a.state === 'hidden') { text = name + ' · ' + W.hidden(a.g, fmt(a.hiddenT)); st = 'hidden'; }
+    else if (a.state === 'maybe' && a.d > 18) { text = W.far + ' ' + a.id + ' · ' + W.maybe + ' · ' + Math.round(a.d) + ' m'; st = 'maybe'; }
+    else { text = name + ' · ' + (a.state === 'sure' ? W.sure(a.g) : W.maybe) + ' · ' + fmt(a.d) + ' m' + (a.inPath ? ' · ' + W.ahead : ''); st = isDanger ? 'danger' : a.state; }
     if (lab.textContent !== text) lab.textContent = text;
     lab.dataset.s = st;
     const prio = st === 'danger' ? 4 : st === 'hidden' ? 3 : a.inPath ? 2.5 : st === 'sure' ? 2 : 1;
@@ -657,11 +717,11 @@ function updateVisuals(dt) {
   // header and rail
   const st = $('status');
   const want = S.reliable ? 'ok' : 'bad';
-  if (st.dataset.state !== want) { st.dataset.state = want; $('statusText').textContent = S.reliable ? TEXT.statusOk : TEXT.statusBad; }
+  if (st.dataset.state !== want) { st.dataset.state = want; $('statusText').textContent = S.reliable ? T.statusOk : T.statusBad; }
   $('hatch').style.opacity = S.reliable ? '0' : '1';
   if (!scrubbing) paint(S.t);
   const sec = Math.floor(S.t);
-  if (sec !== shownSec) { shownSec = sec; scrubEl.setAttribute('aria-valuenow', String(sec)); scrubEl.setAttribute('aria-valuetext', clockText(sec) + ', ' + CH[chapterAt(S.t)].name); }
+  if (sec !== shownSec) { shownSec = sec; scrubEl.setAttribute('aria-valuenow', String(sec)); scrubEl.setAttribute('aria-valuetext', clockText(sec) + ', ' + CH[chapterAt(S.t)].name[lang]); }
 }
 
 // ---------------- main loop ----------------

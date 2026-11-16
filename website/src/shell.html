@@ -28,6 +28,7 @@
   --glass-shine: rgba(255, 255, 255, .12);
   --glass-drop: rgba(0, 0, 0, .25);
   --sheet: rgba(28, 28, 30, .82);
+  --segment: #636366;
 }
 @media (prefers-color-scheme: light) {
   :root {
@@ -50,6 +51,7 @@
     --glass-shine: rgba(255, 255, 255, .8);
     --glass-drop: rgba(0, 0, 0, .08);
     --sheet: rgba(255, 255, 255, .9);
+    --segment: #FFFFFF;
   }
 }
 :root {
@@ -100,6 +102,11 @@ button:focus-visible { outline: 2px solid var(--accent-text); outline-offset: 2p
 .mark svg { width: 24px; height: 24px; }
 h1 { margin: 0; font: 700 1.375rem/1.27 var(--font); }
 .sub { margin: 0; color: var(--label-2); font-size: .8125rem; line-height: 1.385; }
+/* Language: a segmented control, like Apple's */
+.lang { display: inline-flex; gap: 2px; padding: 4px; border-radius: 999px; }
+.lang button { min-width: 44px; min-height: 36px; padding: 0 12px; background: transparent; color: var(--label-2); font-size: .8125rem; }
+.lang button:hover { background: var(--fill); }
+.lang button[aria-pressed="true"] { background: var(--segment); color: var(--label); box-shadow: 0 1px 3px var(--glass-drop); }
 .status { display: inline-flex; align-items: center; gap: 10px; min-height: 44px; padding: 0 16px; border-radius: 999px; font-weight: 600; }
 .status .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--sure); }
 .status[data-state="bad"] { background: var(--warn); border-color: var(--warn); color: var(--on-color); }
@@ -139,15 +146,15 @@ h1 { margin: 0; font: 700 1.375rem/1.27 var(--font); }
 .card { width: min(560px, 100%); max-height: 100%; overflow: auto; padding: 28px; border-radius: 28px; background: var(--sheet); }
 .card h2 { margin: 0 0 8px; font: 700 1.75rem/1.214 var(--font); text-wrap: balance; }
 .card p { margin: 0; color: var(--label-2); font-size: 1.0625rem; line-height: 1.294; }
-.cta { display: flex; flex-wrap: wrap; gap: 12px; margin: 24px 0 16px; }
+.cta { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 24px; }
 .cta button { padding: 0 24px; font-size: 1.0625rem; }
 .cta .primary { background: var(--accent); color: #FFFFFF; }
 .cta .primary:hover { background: var(--accent-hover); }
-.card .note { font-size: .8125rem; line-height: 1.385; }
 
 /* Subtitles: white text on a dark box per line, centered at the bottom of the street view, like Apple's */
 .subtitles { position: absolute; z-index: 4; left: 50%; bottom: 20px; transform: translateX(-50%); width: max-content; max-width: calc(100% - 48px); display: flex; flex-direction: column; align-items: center; gap: 4px; text-align: center; pointer-events: none; }
 .subtitles p { margin: 0; }
+.subtitles span:empty { display: none; }
 .subtitles span { padding: 2px 10px; border-radius: 6px; background: rgba(0, 0, 0, .75); color: #FFFFFF; font: 600 clamp(1.0625rem, .8rem + .9vw, 1.5rem)/1.5 var(--font); -webkit-box-decoration-break: clone; box-decoration-break: clone; }
 
 /* Rail: an Apple-style player */
@@ -176,48 +183,51 @@ h1 { margin: 0; font: 700 1.375rem/1.27 var(--font); }
     <span class="mark" aria-hidden="true"><svg viewBox="0 0 24 24" fill="none" stroke="#FFFFFF" stroke-width="2" stroke-linecap="round"><circle cx="6" cy="12" r="1.6" fill="#FFFFFF" stroke="none"/><path d="M10 8.5a5 5 0 0 1 0 7"/><path d="M13.5 5.5a9 9 0 0 1 0 13"/><path d="M17 2.8a13 13 0 0 1 0 18.4" stroke-dasharray="2.5 2.5"/></svg></span>
     <div>
       <h1>FieldVision</h1>
-      <p class="sub">Guida per pedoni non vedenti, con la sola fotocamera di iPhone.</p>
+      <p class="sub" data-i18n="subtitle">Guida per pedoni non vedenti, con la sola fotocamera di iPhone.</p>
     </div>
+  </div>
+  <div class="lang glass" role="group" aria-label="Lingua" data-i18n-label="language">
+    <button type="button" data-lang="it" lang="it" aria-label="Italiano" aria-pressed="true">IT</button>
+    <button type="button" data-lang="en" lang="en" aria-label="English" aria-pressed="false">EN</button>
   </div>
   <div class="status glass" id="status" data-state="ok">
     <span class="dot" aria-hidden="true"></span>
-    <span id="statusText" role="status">Guida affidabile</span>
+    <span id="statusText" role="status" data-i18n="statusOk">Guida affidabile</span>
   </div>
 </header>
 
 <main class="views" id="views">
-  <section class="view" aria-label="La strada vera">
+  <section class="view" aria-label="La strada vera" data-i18n-label="streetView">
     <canvas id="cReal"></canvas>
     <div class="dim" id="dim"></div>
-    <span class="tag glass">Realtà</span>
+    <span class="tag glass" data-i18n="tagReal">Realtà</span>
     <div class="subtitles" id="subtitles" aria-live="polite">
       <p hidden><span id="cue"></span></p>
-      <p><span id="caption">Guida attiva. Vedo solo davanti.</span></p>
+      <p><span id="caption"></span></p>
     </div>
   </section>
-  <section class="view" aria-label="La mappa 3D che iPhone costruisce dal vivo">
+  <section class="view" aria-label="La mappa 3D che iPhone costruisce dal vivo" data-i18n-label="mapView">
     <canvas id="cSplat"></canvas>
     <div class="labels" id="labels"></div>
     <div class="hatch" id="hatch"></div>
-    <span class="tag tag-accent">Mappa 3D dal vivo</span>
+    <span class="tag tag-accent" data-i18n="tagMap">Mappa 3D dal vivo</span>
     <ul class="legend glass">
-      <li><span class="sw sure"></span>Confermato</li>
-      <li><span class="sw maybe"></span>Forse</li>
-      <li><span class="sw hidden"></span>Nascosto</li>
-      <li><span class="sw danger"></span>Pericolo</li>
-      <li><span class="sw warn"></span>Non affidabile</li>
+      <li><span class="sw sure"></span><span data-i18n="legendSure">Confermato</span></li>
+      <li><span class="sw maybe"></span><span data-i18n="legendMaybe">Forse</span></li>
+      <li><span class="sw hidden"></span><span data-i18n="legendHidden">Nascosto</span></li>
+      <li><span class="sw danger"></span><span data-i18n="legendDanger">Pericolo</span></li>
+      <li><span class="sw warn"></span><span data-i18n="legendWarn">Non affidabile</span></li>
     </ul>
   </section>
 
   <div class="start" id="start">
     <div class="card glass">
-      <h2>Ascolta come FieldVision guida un pedone non vedente</h2>
-      <p>A sinistra la strada vera, a destra la mappa 3D che iPhone costruisce mentre la persona cammina. Per sentire voce e suoni, usa le cuffie.</p>
+      <h2 data-i18n="startTitle">Ascolta come FieldVision guida un pedone non vedente</h2>
+      <p data-i18n="startBody">A sinistra la strada vera, a destra la mappa 3D che iPhone costruisce mentre la persona cammina. Per sentire voce e suoni, usa le cuffie.</p>
       <div class="cta">
-        <button class="primary" id="goAudio" type="button">Avvia con audio</button>
-        <button id="goSilent" type="button">Avvia senza audio</button>
+        <button class="primary" id="goAudio" type="button" data-i18n="startAudio">Avvia con audio</button>
+        <button id="goSilent" type="button" data-i18n="startSilent">Avvia senza audio</button>
       </div>
-      <p class="note">Scena simulata: tempi e valori illustrano l’idea, non sono misure.</p>
     </div>
   </div>
 </main>
@@ -225,8 +235,8 @@ h1 { margin: 0; font: 700 1.375rem/1.27 var(--font); }
 <footer class="rail">
   <div class="player glass">
     <button class="icon-btn" id="btnPlay" type="button" aria-label="Riproduci"></button>
-    <div class="scrub" id="scrub" role="slider" tabindex="0" aria-label="Posizione nella scena"><div class="track" id="track"></div><span class="tip glass" id="tip" hidden></span></div>
-    <button class="icon-btn" id="btnCaptions" type="button" aria-label="Sottotitoli" aria-pressed="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h16a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2h-8l-5 4v-4H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M6 10h4M12 10h6M6 13.5h7M15 13.5h3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
+    <div class="scrub" id="scrub" role="slider" tabindex="0" aria-label="Posizione nella scena" data-i18n-label="scrub"><div class="track" id="track"></div><span class="tip glass" id="tip" hidden></span></div>
+    <button class="icon-btn" id="btnCaptions" type="button" aria-label="Sottotitoli" data-i18n-label="captions" aria-pressed="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 4h16a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2h-8l-5 4v-4H4a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M6 10h4M12 10h6M6 13.5h7M15 13.5h3" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg></button>
     <button class="icon-btn" id="btnAudio" type="button" aria-label="Attiva audio"></button>
   </div>
 </footer>
